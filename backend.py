@@ -1,7 +1,7 @@
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
-import whisper
+from faster_whisper import WhisperModel
 import json
 import os
 import tempfile
@@ -87,11 +87,10 @@ def init_db():
 init_db()
 session_user = {}
 
-# ========== ЗАГРУЗКА МОДЕЛИ WHISPER ==========
-print("Загрузка модели Whisper...")
-from faster_whisper import WhisperModel
+# ========== ЗАГРУЗКА МОДЕЛИ faster-whisper ==========
+print("Загрузка модели faster-whisper (tiny)...")
 whisper_model = WhisperModel("tiny", device="cpu", compute_type="int8")
-print("Модель Whisper загружена!")
+print("Модель faster-whisper загружена!")
 
 # ========== БИБЛИОТЕКА УПРАЖНЕНИЙ ==========
 TONGUE_TWISTERS = {
@@ -172,9 +171,7 @@ def clean_text(text):
     """Очистка текста от знаков препинания"""
     if not text:
         return ""
-    # Удаляем все знаки препинания, кроме дефиса и пробелов
     text = re.sub(r'[^\w\s\-]', '', text)
-    # Удаляем лишние пробелы
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
@@ -446,7 +443,6 @@ async def get_free_topics():
 @app.post("/set_etalon")
 async def set_etalon(text: str = Form(...), name: str = Form(...)):
     global current_etalon, current_etalon_name
-    # Очищаем эталон от знаков препинания
     clean = clean_text(text)
     current_etalon = clean
     current_etalon_name = name
@@ -586,7 +582,6 @@ async def analyze(file: UploadFile = File(...), mode: str = Form("strict"), dura
     try:
         segments, info = whisper_model.transcribe(wav_path, language="ru", beam_size=5)
         recognized_text = " ".join([seg.text for seg in segments]).lower().strip()
-        # ОЧИСТКА ОТ ЗНАКОВ ПРЕПИНАНИЯ
         recognized_text = clean_text(recognized_text)
     except Exception as e:
         recognized_text = ""
@@ -606,7 +601,6 @@ async def analyze(file: UploadFile = File(...), mode: str = Form("strict"), dura
     recognized_words = recognized_text.split() if recognized_text else []
     word_count = len(recognized_words)
 
-    # Лексика
     if word_count == 0 or len(ETALON_SET) == 0:
         lexical_score = 0
     else:
@@ -614,7 +608,6 @@ async def analyze(file: UploadFile = File(...), mode: str = Form("strict"), dura
         common = recognized_set & ETALON_SET
         lexical_score = round(len(common) / len(ETALON_SET) * 100, 1)
 
-    # Темп (с учётом абсурдных текстов)
     if duration > 0 and word_count > 0:
         words_per_minute = (word_count / duration) * 60
 
@@ -643,12 +636,10 @@ async def analyze(file: UploadFile = File(...), mode: str = Form("strict"), dura
         tempo_score = 0
         tempo_feedback_text = "недостаточно слов"
 
-    # Слова-паразиты
     orig_words = recognized_text.split() if recognized_text else []
     stop_words_found = [w for w in orig_words if w in STOP_WORDS]
     stop_words_score = max(0, 100 - len(stop_words_found) * 15) if stop_words_found else 100
 
-    # Фонетика
     if word_count == 0 or len(ETALON_WORDS) == 0:
         phonetics_score = 0
     else:
@@ -711,9 +702,8 @@ async def analyze_free(file: UploadFile = File(...), duration: float = Form(10.0
         return {"error": "Ошибка конвертации"}
 
     try:
-        result = whisper_model.transcribe(wav_path, language="ru", fp16=False)
-        recognized_text = result["text"].lower().strip()
-        # ОЧИСТКА ОТ ЗНАКОВ ПРЕПИНАНИЯ
+        segments, info = whisper_model.transcribe(wav_path, language="ru", beam_size=5)
+        recognized_text = " ".join([seg.text for seg in segments]).lower().strip()
         recognized_text = clean_text(recognized_text)
     except Exception as e:
         recognized_text = ""
@@ -809,4 +799,4 @@ async def get_absurd_exercises():
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
