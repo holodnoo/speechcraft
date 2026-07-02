@@ -89,7 +89,8 @@ session_user = {}
 
 # ========== ЗАГРУЗКА МОДЕЛИ WHISPER ==========
 print("Загрузка модели Whisper...")
-whisper_model = whisper.load_model("small")
+from faster_whisper import WhisperModel
+whisper_model = WhisperModel("tiny", device="cpu", compute_type="int8")
 print("Модель Whisper загружена!")
 
 # ========== БИБЛИОТЕКА УПРАЖНЕНИЙ ==========
@@ -583,8 +584,8 @@ async def analyze(file: UploadFile = File(...), mode: str = Form("strict"), dura
         return {"error": "Ошибка конвертации аудио"}
 
     try:
-        result = whisper_model.transcribe(wav_path, language="ru", fp16=False)
-        recognized_text = result["text"].lower().strip()
+        segments, info = whisper_model.transcribe(wav_path, language="ru", beam_size=5)
+        recognized_text = " ".join([seg.text for seg in segments]).lower().strip()
         # ОЧИСТКА ОТ ЗНАКОВ ПРЕПИНАНИЯ
         recognized_text = clean_text(recognized_text)
     except Exception as e:
