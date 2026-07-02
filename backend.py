@@ -23,7 +23,6 @@ app.add_middleware(
 # ========== БАЗА ДАННЫХ ==========
 DB_PATH = "speechcraft.db"
 
-
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -81,7 +80,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-
 init_db()
 session_user = {}
 
@@ -118,23 +116,17 @@ DICTION_EXERCISES = {
 }
 
 BREATHING_EXERCISES = {
-    "1": {"name": "Свеча", "description": "Представь свечку и попробуй задуть её ровным долгим выдохом",
-          "tips": "Вдох носом (2-3 сек), выдох ртом (5-10 сек)"},
-    "2": {"name": "Насос", "description": "Наклоны вперёд с резким вдохом в нижней точке",
-          "tips": "8-10 раз, отдых 30 секунд"},
-    "3": {"name": "Счёт на выдохе", "description": "На одном выдохе посчитать до 10, затем до 15, до 20",
-          "tips": "Следи, чтобы выдох был плавным"},
-    "4": {"name": "Ёжик", "description": "Резкий носовой вдох, свободный выдох через рот",
-          "tips": "32 раза без остановки"},
-    "5": {"name": "Трубач", "description": "Представь, что играешь на трубе — мощный выдох короткими импульсами",
-          "tips": "5-7 раз, отдых после каждого"}
+    "1": {"name": "Свеча", "description": "Представь свечку и попробуй задуть её ровным долгим выдохом", "tips": "Вдох носом (2-3 сек), выдох ртом (5-10 сек)"},
+    "2": {"name": "Насос", "description": "Наклоны вперёд с резким вдохом в нижней точке", "tips": "8-10 раз, отдых 30 секунд"},
+    "3": {"name": "Счёт на выдохе", "description": "На одном выдохе посчитать до 10, затем до 15, до 20", "tips": "Следи, чтобы выдох был плавным"},
+    "4": {"name": "Ёжик", "description": "Резкий носовой вдох, свободный выдох через рот", "tips": "32 раза без остановки"},
+    "5": {"name": "Трубач", "description": "Представь, что играешь на трубе — мощный выдох короткими импульсами", "tips": "5-7 раз, отдых после каждого"}
 }
 
 ARTICULATION_EXERCISES = {
     "1": {"name": "Улыбка-трубочка", "description": "Растянуть губы в улыбку → вытянуть в трубочку", "tips": "10 раз"},
     "2": {"name": "Лошадка", "description": "Пощёлкать языком, присасывая его к нёбу", "tips": "15-20 раз"},
-    "3": {"name": "Часики", "description": "Кончиком языка водить влево-вправо по губам",
-          "tips": "10 раз в каждую сторону"},
+    "3": {"name": "Часики", "description": "Кончиком языка водить влево-вправо по губам", "tips": "10 раз в каждую сторону"},
     "4": {"name": "Качели", "description": "Язык тянется к носу → к подбородку", "tips": "10-15 раз"},
     "5": {"name": "Маляр", "description": "Языком красить нёбо от зубов к горлу", "tips": "10 раз"}
 }
@@ -159,14 +151,12 @@ FREE_TOPICS = [
     "Что бы я изменил(а) в мире"
 ]
 
-
 def clean_text(text):
     if not text:
         return ""
     text = re.sub(r'[^\w\s\-]', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
     return text
-
 
 def save_training_result(user_id, data):
     conn = sqlite3.connect(DB_PATH)
@@ -181,46 +171,37 @@ def save_training_result(user_id, data):
     conn.commit()
     conn.close()
 
-
 def validate_email(email):
     return re.match(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', email)
-
 
 def validate_password(password):
     return len(password) >= 6
 
-
-# ========== API ЭНДПОИНТЫ ==========
+# ========== API ==========
 @app.get("/", response_class=HTMLResponse)
 async def home():
     with open("index.html", "r", encoding="utf-8") as f:
         return f.read()
 
-
 @app.get("/tongue_twisters")
 async def get_tongue_twisters():
     return TONGUE_TWISTERS
-
 
 @app.get("/diction_exercises")
 async def get_diction_exercises():
     return DICTION_EXERCISES
 
-
 @app.get("/breathing_exercises")
 async def get_breathing_exercises():
     return BREATHING_EXERCISES
-
 
 @app.get("/articulation_exercises")
 async def get_articulation_exercises():
     return ARTICULATION_EXERCISES
 
-
 @app.get("/free_topics")
 async def get_free_topics():
     return FREE_TOPICS
-
 
 @app.post("/set_etalon")
 async def set_etalon(text: str = Form(...), name: str = Form(...)):
@@ -228,7 +209,6 @@ async def set_etalon(text: str = Form(...), name: str = Form(...)):
     current_etalon = clean_text(text)
     current_etalon_name = name
     return {"status": "ok"}
-
 
 @app.post("/register")
 async def register(email: str = Form(...), username: str = Form(...), password: str = Form(...)):
@@ -252,7 +232,6 @@ async def register(email: str = Form(...), username: str = Form(...), password: 
         conn.close()
         return {"status": "error", "message": "Пользователь с таким email уже существует"}
 
-
 @app.post("/login")
 async def login(email: str = Form(...), password: str = Form(...)):
     conn = sqlite3.connect(DB_PATH)
@@ -266,13 +245,11 @@ async def login(email: str = Form(...), password: str = Form(...)):
         return {"status": "ok", "token": token, "username": row[1]}
     return {"status": "error", "message": "Неверный email или пароль"}
 
-
 @app.post("/logout")
 async def logout(token: str = Form(...)):
     if token in session_user:
         del session_user[token]
     return {"status": "ok"}
-
 
 @app.get("/current_user")
 async def get_current_user(token: str = None):
@@ -280,7 +257,6 @@ async def get_current_user(token: str = None):
         return {"status": "ok", "user_id": session_user[token]["id"], "username": session_user[token]["username"],
                 "email": session_user[token]["email"]}
     return {"status": "error"}
-
 
 @app.get("/history")
 async def get_history(token: str = None):
@@ -296,7 +272,6 @@ async def get_history(token: str = None):
     conn.close()
     return [{"id": r[0], "exercise_name": r[1], "mode": r[2], "final_score": r[3], "created_at": r[4]} for r in rows]
 
-
 @app.get("/stats")
 async def get_stats(token: str = None):
     if not token or token not in session_user:
@@ -311,7 +286,6 @@ async def get_stats(token: str = None):
     conn.close()
     return {"avg_score": round(row[0], 1) if row[0] else 0, "max_score": round(row[1], 1) if row[1] else 0,
             "total_trainings": row[2] if row[2] else 0, "avg_tempo": round(row[3], 1) if row[3] else 0}
-
 
 @app.get("/progress_data")
 async def get_progress_data(token: str = None):
@@ -334,54 +308,209 @@ async def get_progress_data(token: str = None):
     scores = [round(row[1], 1) for row in rows]
     return {"dates": dates, "scores": scores}
 
+# ========== АНАЛИЗ ТЕКСТА (без модели) ==========
+def analyze_text_common(recognized_text, duration, is_free=False, topic=None):
+    """Общая логика анализа текста для обоих эндпоинтов"""
+    words = recognized_text.strip().split()
+    word_count = len(words)
 
-@app.post("/analyze")
-async def analyze(file: UploadFile = File(...), mode: str = Form("strict"), duration: float = Form(10.0),
-                  token: str = Form(None)):
+    # Темп
+    if duration > 0 and word_count > 0:
+        words_per_minute = (word_count / duration) * 60
+        if 100 <= words_per_minute <= 140:
+            tempo_score = 100
+            tempo_feedback = "Идеальный темп речи"
+        elif words_per_minute < 100:
+            tempo_score = max(0, round(100 - (100 - words_per_minute) / 100 * 100, 1))
+            tempo_feedback = "Речь слишком медленная. Попробуй говорить быстрее"
+        else:
+            tempo_score = max(0, round(100 - (words_per_minute - 140) / 140 * 100, 1))
+            tempo_feedback = "Речь слишком быстрая. Попробуй говорить медленнее"
+    else:
+        words_per_minute = 0
+        tempo_score = 0
+        tempo_feedback = "Недостаточно слов для оценки темпа"
+
+    # Слова-паразиты
+    stop_words_found = [w for w in words if w in STOP_WORDS]
+    if len(stop_words_found) == 0:
+        stop_words_score = 100
+        stop_words_feedback = "Слова-паразиты не обнаружены"
+    elif len(stop_words_found) <= 2:
+        stop_words_score = max(0, 100 - len(stop_words_found) * 15)
+        stop_words_feedback = f"Есть слова-паразиты: {', '.join(set(stop_words_found))}"
+    else:
+        stop_words_score = max(0, 100 - len(stop_words_found) * 12)
+        stop_words_feedback = f"Много слов-паразитов: {', '.join(set(stop_words_found[:4]))}"
+
+    # Для свободной речи – дополнительная аналитика
+    if is_free:
+        unique_words = len(set(words))
+        unique_ratio = round(unique_words / word_count * 100, 1) if word_count > 0 else 0
+        if unique_ratio >= 60:
+            lexical_diversity_feedback = f"Отличное разнообразие лексики ({unique_ratio}% уникальных слов)"
+            lexical_diversity_score = 100
+        elif unique_ratio >= 40:
+            lexical_diversity_feedback = f"Хорошее разнообразие лексики ({unique_ratio}% уникальных слов)"
+            lexical_diversity_score = 75
+        elif unique_ratio >= 20:
+            lexical_diversity_feedback = f"Среднее разнообразие лексики ({unique_ratio}% уникальных слов)"
+            lexical_diversity_score = 50
+        else:
+            lexical_diversity_feedback = f"Низкое разнообразие лексики ({unique_ratio}% уникальных слов)"
+            lexical_diversity_score = 30
+
+        # Оценка раскрытия темы
+        topic_score = 100
+        topic_feedback = ""
+        if topic and topic.strip():
+            keywords = [w for w in topic.lower().split() if len(w) > 2]
+            if keywords:
+                found = [k for k in keywords if k in recognized_text.lower()]
+                if not found:
+                    topic_score = 30
+                    topic_feedback = f"Тема «{topic}» не раскрыта"
+                elif len(found) < len(keywords):
+                    topic_score = round(30 + (len(found)/len(keywords))*70, 1)
+                    topic_feedback = f"Тема раскрыта частично ({len(found)} из {len(keywords)})"
+                else:
+                    topic_score = 100
+                    topic_feedback = f"Тема «{topic}» раскрыта хорошо"
+            else:
+                topic_feedback = "Тема принята (нет ключевых слов для оценки)"
+        else:
+            topic_feedback = "Тема не задана"
+
+        final_score = round(
+            tempo_score * 0.3 +
+            lexical_diversity_score * 0.3 +
+            stop_words_score * 0.2 +
+            topic_score * 0.2,
+            1
+        )
+        return {
+            "word_count": word_count,
+            "words_per_minute": int(words_per_minute),
+            "tempo_score": tempo_score,
+            "tempo_feedback": tempo_feedback,
+            "stop_words_score": stop_words_score,
+            "stop_words_feedback": stop_words_feedback,
+            "lexical_diversity_score": lexical_diversity_score,
+            "lexical_diversity_feedback": lexical_diversity_feedback,
+            "topic_score": topic_score,
+            "topic_feedback": topic_feedback,
+            "final_score": final_score,
+            "unique_ratio": unique_ratio,
+            "stop_words_found": stop_words_found,
+            "duration": round(duration, 1)
+        }
+    else:
+        # Обычный анализ для упражнений
+        global current_etalon, current_etalon_name
+        ETALON_WORDS = current_etalon.lower().split()
+        ETALON_SET = set(ETALON_WORDS)
+        recognized_words = words
+
+        # Лексика
+        if word_count == 0 or len(ETALON_SET) == 0:
+            lexical_score = 0
+        else:
+            recognized_set = set(recognized_words)
+            common = recognized_set & ETALON_SET
+            lexical_score = round(len(common) / len(ETALON_SET) * 100, 1)
+
+        # Фонетика (позиционное сравнение)
+        if word_count == 0 or len(ETALON_WORDS) == 0:
+            phonetics_score = 0
+        else:
+            matches = 0
+            min_len = min(len(recognized_words), len(ETALON_WORDS))
+            for i in range(min_len):
+                if recognized_words[i] == ETALON_WORDS[i]:
+                    matches += 1
+            extra_words = max(0, len(recognized_words) - len(ETALON_WORDS))
+            extra_penalty = min(30, extra_words * 10)
+            base_score = (matches / len(ETALON_WORDS)) * 100
+            phonetics_score = round(max(0, base_score - extra_penalty), 1)
+
+        final_score = round(phonetics_score * 0.4 + lexical_score * 0.3 + tempo_score * 0.2 + stop_words_score * 0.1, 1)
+
+        return {
+            "recognized_text": recognized_text,
+            "phonetics_score": phonetics_score,
+            "lexical_score": lexical_score,
+            "tempo_score": tempo_score,
+            "stop_words_score": stop_words_score,
+            "final_score": final_score,
+            "words_per_minute": int(words_per_minute),
+            "tempo_feedback": tempo_feedback,
+            "duration": round(duration, 1),
+            "word_count": word_count,
+            "stop_words_found": stop_words_found
+        }
+
+@app.post("/analyze_text")
+async def analyze_text(text: str = Form(...), duration: float = Form(...), mode: str = Form("strict"), token: str = Form(None)):
     if not token or token not in session_user:
         return {"error": "Не авторизован"}
-
     user_id = session_user[token]["id"]
-    global current_etalon, current_etalon_name
+    result = analyze_text_common(text, duration, is_free=False)
+    # Сохраняем тренировку
+    save_training_result(user_id, {
+        "exercise_name": current_etalon_name,
+        "mode": mode,
+        "recognized_text": result.get("recognized_text", ""),
+        "etalon_text": current_etalon,
+        "word_count": result.get("word_count", 0),
+        "word_count_etalon": len(current_etalon.split()),
+        "duration": result.get("duration", 0),
+        "words_per_minute": result.get("words_per_minute", 0),
+        "phonetics_score": result.get("phonetics_score", 0),
+        "lexical_score": result.get("lexical_score", 0),
+        "tempo_score": result.get("tempo_score", 0),
+        "stop_words_score": result.get("stop_words_score", 0),
+        "final_score": result.get("final_score", 0),
+        "unique_words_ratio": 0,
+        "pauses_count": 0
+    })
+    return result
 
-    # ВРЕМЕННО: возвращаем заглушку
-    return {
-        "recognized_text": "привет как дела",
-        "phonetics_score": 85,
-        "lexical_score": 90,
-        "tempo_score": 80,
-        "stop_words_score": 100,
-        "final_score": 86,
-        "duration": round(duration, 1),
-        "words_per_minute": 120,
-        "tempo_feedback": "хороший темп"
-    }
-
-
-@app.post("/analyze_free")
-async def analyze_free(file: UploadFile = File(...), duration: float = Form(10.0), topic: str = Form(""),
-                       token: str = Form(None)):
+@app.post("/analyze_free_text")
+async def analyze_free_text(text: str = Form(...), duration: float = Form(...), topic: str = Form(""), token: str = Form(None)):
     if not token or token not in session_user:
         return {"error": "Не авторизован"}
-
     user_id = session_user[token]["id"]
+    result = analyze_text_common(text, duration, is_free=True, topic=topic)
+    # Сохраняем тренировку
+    save_training_result(user_id, {
+        "exercise_name": f"Свободная речь{f' (тема: {topic})' if topic else ''}",
+        "mode": "free",
+        "recognized_text": text,
+        "etalon_text": "",
+        "word_count": result.get("word_count", 0),
+        "word_count_etalon": 0,
+        "duration": result.get("duration", 0),
+        "words_per_minute": result.get("words_per_minute", 0),
+        "phonetics_score": 0,
+        "lexical_score": 0,
+        "tempo_score": result.get("tempo_score", 0),
+        "stop_words_score": result.get("stop_words_score", 0),
+        "final_score": result.get("final_score", 0),
+        "unique_words_ratio": result.get("unique_ratio", 0),
+        "pauses_count": 0
+    })
+    # Формируем детальный фидбек для свободной речи
+    detailed = f"Свободная речь{f' (тема: {topic})' if topic else ''}\n"
+    detailed += f"Длительность: {result['duration']} сек\n"
+    detailed += f"Темп: {result['words_per_minute']} слов/мин — {result['tempo_feedback']}\n"
+    detailed += f"Разнообразие лексики: {result['lexical_diversity_feedback']}\n"
+    detailed += f"Слова-паразиты: {result['stop_words_feedback']}\n"
+    detailed += f"{result['topic_feedback']}\n"
+    detailed += f"Общая оценка: {result['final_score']} / 100"
+    result["detailed_feedback"] = detailed
+    return result
 
-    return {
-        "recognized_text": "привет как дела у меня все хорошо",
-        "duration": round(duration, 1),
-        "words_per_minute": 120,
-        "tempo_score": 80,
-        "ttr_score": 85,
-        "stop_words_score": 100,
-        "topic_score": 90,
-        "final_score": 86,
-        "detailed_feedback": "Хорошая речь! Темп нормальный, слова-паразиты не обнаружены.",
-        "word_count": 5,
-        "unique_ratio": 80,
-        "stop_words_found": []
-    }
-
-
+# ========== ПОЛЬЗОВАТЕЛЬСКИЕ УПРАЖНЕНИЯ ==========
 @app.post("/add_tongue_twister")
 async def add_tongue_twister(text: str = Form(...), token: str = Form(None)):
     if not token or token not in session_user:
@@ -395,7 +524,6 @@ async def add_tongue_twister(text: str = Form(...), token: str = Form(None)):
     conn.close()
     return {"status": "ok"}
 
-
 @app.get("/my_tongue_twisters")
 async def get_my_tongue_twisters(token: str = None):
     if not token or token not in session_user:
@@ -408,7 +536,6 @@ async def get_my_tongue_twisters(token: str = None):
     conn.close()
     return [{"id": r[0], "text": r[1]} for r in rows]
 
-
 @app.post("/delete_tongue_twister")
 async def delete_tongue_twister(id: int = Form(...), token: str = Form(None)):
     if not token or token not in session_user:
@@ -420,7 +547,6 @@ async def delete_tongue_twister(id: int = Form(...), token: str = Form(None)):
     conn.commit()
     conn.close()
     return {"status": "ok"}
-
 
 @app.post("/add_absurd_text")
 async def add_absurd_text(name: str = Form(...), text: str = Form(...), token: str = Form(None)):
@@ -435,7 +561,6 @@ async def add_absurd_text(name: str = Form(...), text: str = Form(...), token: s
     conn.close()
     return {"status": "ok"}
 
-
 @app.get("/my_absurd_texts")
 async def get_my_absurd_texts(token: str = None):
     if not token or token not in session_user:
@@ -443,12 +568,10 @@ async def get_my_absurd_texts(token: str = None):
     user_id = session_user[token]["id"]
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("SELECT id, name, text FROM user_absurd_texts WHERE user_id = ? ORDER BY created_at DESC",
-                   (user_id,))
+    cursor.execute("SELECT id, name, text FROM user_absurd_texts WHERE user_id = ? ORDER BY created_at DESC", (user_id,))
     rows = cursor.fetchall()
     conn.close()
     return [{"id": r[0], "name": r[1], "text": r[2]} for r in rows]
-
 
 @app.post("/delete_absurd_text")
 async def delete_absurd_text(id: int = Form(...), token: str = Form(None)):
@@ -461,7 +584,6 @@ async def delete_absurd_text(id: int = Form(...), token: str = Form(None)):
     conn.commit()
     conn.close()
     return {"status": "ok"}
-
 
 # ========== АБСУРД-ТРЕНИНГ ==========
 ABSURD_EXERCISES = {
@@ -491,11 +613,9 @@ ABSURD_EXERCISES = {
     }
 }
 
-
 @app.get("/absurd_exercises")
 async def get_absurd_exercises():
     return ABSURD_EXERCISES
-
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
