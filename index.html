@@ -1,0 +1,1879 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>SpeechCraft — говори свободно</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --font-size-base: clamp(14px, 2.5vw, 18px);
+            --font-size-small: calc(var(--font-size-base) * 0.75);
+            --font-size-medium: calc(var(--font-size-base) * 1);
+            --font-size-large: calc(var(--font-size-base) * 1.25);
+            --spacing-base: clamp(12px, 3vw, 24px);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f5f3f0;
+            color: #2c241a;
+            padding: var(--spacing-base);
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 700px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: clamp(20px, 4vw, 28px);
+            padding: clamp(16px, 3vw, 24px);
+            margin-bottom: var(--spacing-base);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            border: 1px solid #ede6df;
+        }
+
+        /* ===== АДАПТИВНЫЙ ШРИФТ ===== */
+        .logo {
+            font-size: clamp(1.4rem, 5vw, 1.8rem);
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .logo span:last-child {
+            font-style: italic;
+            color: #c7b59b;
+            font-weight: 400;
+        }
+
+        .subhead {
+            font-size: var(--font-size-small);
+            color: #9a8776;
+            margin-bottom: var(--spacing-base);
+            border-left: 3px solid #e6d5c3;
+            padding-left: 12px;
+            line-height: 1.4;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-base);
+            gap: 12px;
+        }
+
+        .logout-btn {
+            background: none;
+            border: 1px solid #e2d9d2;
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-size: var(--font-size-small);
+            color: #7b6b5c;
+            cursor: pointer;
+            min-height: 38px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .logout-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* ===== ТИПЫ УПРАЖНЕНИЙ ===== */
+        .type-row {
+            display: flex;
+            gap: clamp(4px, 1.5vw, 10px);
+            flex-wrap: wrap;
+            margin-bottom: var(--spacing-base);
+        }
+
+        .type-btn {
+            background: #f3efeb;
+            border: none;
+            padding: clamp(6px, 1.5vw, 10px) clamp(10px, 2vw, 18px);
+            border-radius: 40px;
+            font-size: var(--font-size-small);
+            font-weight: 500;
+            color: #5a4a38;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 40px;
+            transition: all 0.2s;
+            flex: 0 1 auto;
+        }
+
+        .type-btn:active {
+            transform: scale(0.95);
+        }
+
+        .type-btn.active {
+            background: #2c241a;
+            color: white;
+        }
+
+        .type-btn i {
+            font-size: var(--font-size-small);
+        }
+
+        /* ===== СПИСОК УПРАЖНЕНИЙ ===== */
+        .exercises-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: var(--spacing-base);
+            max-height: 260px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .exercise-item {
+            background: #fefdfc;
+            border: 1px solid #ece5df;
+            border-radius: clamp(16px, 3vw, 20px);
+            padding: clamp(10px, 2vw, 14px) clamp(12px, 2.5vw, 16px);
+            font-size: var(--font-size-small);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 44px;
+            transition: all 0.2s;
+            -webkit-user-select: none;
+            user-select: none;
+            word-break: break-word;
+            gap: 8px;
+        }
+
+        .exercise-item:active {
+            transform: scale(0.98);
+        }
+
+        .exercise-item.selected {
+            background: #f3ede8;
+            border-left: 4px solid #c7b59b;
+        }
+
+        .delete-icon {
+            color: #b8aa9a;
+            cursor: pointer;
+            padding: 8px 10px;
+            border-radius: 20px;
+            transition: 0.2s;
+            flex-shrink: 0;
+            min-height: 38px;
+            display: flex;
+            align-items: center;
+        }
+
+        .delete-icon:active {
+            transform: scale(0.9);
+        }
+
+        .part-item {
+            margin-left: 20px;
+            background: #fefdfc;
+            border: 1px solid #ece5df;
+            border-radius: clamp(16px, 3vw, 20px);
+            padding: clamp(8px, 1.5vw, 12px) clamp(12px, 2.5vw, 16px);
+            font-size: var(--font-size-small);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 44px;
+            gap: 8px;
+            word-break: break-word;
+        }
+
+        .part-item:active {
+            transform: scale(0.98);
+        }
+
+        .part-item.selected {
+            background: #f3ede8;
+            border-left: 4px solid #c7b59b;
+        }
+
+        .info-card {
+            background: #fefdfc;
+            border: 1px solid #ece5df;
+            border-radius: clamp(16px, 3vw, 20px);
+            padding: clamp(12px, 2vw, 16px);
+            margin-bottom: 12px;
+        }
+
+        .info-card .title {
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-size: var(--font-size-medium);
+        }
+
+        .info-card .description {
+            font-size: var(--font-size-small);
+            color: #5a4a38;
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .info-card .tips {
+            font-size: calc(var(--font-size-small) * 0.9);
+            color: #b8aa9a;
+        }
+
+        /* ===== ЭТАЛОН ===== */
+        .etalon-box {
+            background: #fefcf9;
+            border-radius: clamp(20px, 4vw, 24px);
+            padding: clamp(12px, 2vw, 18px) clamp(14px, 3vw, 18px);
+            text-align: center;
+            font-size: clamp(0.8rem, 2.5vw, 0.95rem);
+            line-height: 1.6;
+            margin-bottom: var(--spacing-base);
+            border: 1px solid #e8dfd7;
+            max-height: 200px;
+            overflow-y: auto;
+            word-break: break-word;
+        }
+
+        /* ===== ЗАПИСЬ ===== */
+        .record-panel {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: clamp(12px, 3vw, 20px);
+            background: #fefcf9;
+            padding: clamp(10px, 2vw, 16px) clamp(16px, 3vw, 20px);
+            border-radius: 80px;
+            border: 1px solid #e8dfd7;
+            flex-wrap: wrap;
+        }
+
+        .record-btn {
+            background: #2c241a;
+            border: none;
+            width: clamp(48px, 10vw, 56px);
+            height: clamp(48px, 10vw, 56px);
+            border-radius: 56px;
+            color: white;
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .record-btn:active {
+            transform: scale(0.92);
+        }
+
+        .record-btn.recording {
+            background: #d9534f;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .timer {
+            font-size: clamp(1.1rem, 4vw, 1.4rem);
+            font-weight: 500;
+            font-family: 'Inter', monospace;
+            min-width: clamp(60px, 15vw, 80px);
+            text-align: center;
+        }
+
+        .send-btn {
+            background: #2c241a;
+            color: white;
+            border: none;
+            padding: clamp(8px, 2vw, 12px) clamp(16px, 4vw, 24px);
+            border-radius: 40px;
+            font-size: var(--font-size-small);
+            font-weight: 500;
+            cursor: pointer;
+            min-height: 40px;
+            transition: all 0.2s;
+        }
+
+        .send-btn:active {
+            transform: scale(0.95);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        .send-btn:disabled:active {
+            transform: none;
+        }
+
+        .record-status {
+            font-size: calc(var(--font-size-small) * 0.9);
+            color: #9a8776;
+            text-align: center;
+            margin-top: 8px;
+            min-height: 20px;
+        }
+
+        /* ===== ВИЗУАЛИЗАТОР ===== */
+        .visualizer-container {
+            background: #f3efe8;
+            border-radius: 12px;
+            padding: 8px;
+            margin-bottom: var(--spacing-base);
+            display: none;
+            position: relative;
+            overflow: hidden;
+            min-height: 50px;
+        }
+
+        .visualizer-container.active {
+            display: block;
+        }
+
+        #audioVisualizer {
+            width: 100%;
+            height: 50px;
+            display: block;
+            border-radius: 8px;
+            background: #f3efe8;
+        }
+
+        .visualizer-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: var(--font-size-small);
+            color: #9a8776;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        /* ===== РЕЗУЛЬТАТЫ ===== */
+        .result-area {
+            margin-top: var(--spacing-base);
+        }
+
+        .feedback-block {
+            background: #fefcf9;
+            border-radius: clamp(16px, 3vw, 20px);
+            padding: clamp(12px, 2vw, 16px);
+            font-size: var(--font-size-small);
+            line-height: 1.6;
+            border: 1px solid #ece5df;
+        }
+
+        .recognized-box {
+            background: #f3efe8;
+            border-radius: 16px;
+            padding: 12px;
+            margin-top: 12px;
+            font-size: var(--font-size-small);
+            border: 1px solid #e2d9d2;
+            word-break: break-word;
+        }
+
+        .history-item {
+            background: #fefdfc;
+            border-radius: 16px;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            border: 1px solid #ece5df;
+            font-size: var(--font-size-small);
+        }
+
+        .stats-grid {
+            display: flex;
+            gap: clamp(8px, 2vw, 12px);
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: #fefdfc;
+            border-radius: clamp(16px, 3vw, 20px);
+            padding: clamp(8px, 1.5vw, 12px);
+            text-align: center;
+            flex: 1;
+            min-width: 70px;
+            border: 1px solid #ece5df;
+            font-size: var(--font-size-small);
+        }
+
+        .stat-card strong {
+            font-size: clamp(1rem, 3vw, 1.2rem);
+            display: block;
+            margin-top: 4px;
+        }
+
+        .progress-chart-container {
+            background: #fefdfc;
+            border-radius: clamp(16px, 3vw, 20px);
+            padding: clamp(12px, 2vw, 16px);
+            margin-top: 16px;
+            border: 1px solid #ece5df;
+        }
+
+        /* ===== АУТЕНТИФИКАЦИЯ ===== */
+        .input-group {
+            margin-bottom: 14px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: clamp(12px, 2.5vw, 16px) clamp(14px, 3vw, 16px);
+            border: 1px solid #e2d9d2;
+            border-radius: 60px;
+            font-size: var(--font-size-medium);
+            min-height: 48px;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .btn-block {
+            width: 100%;
+            background: #2c241a;
+            color: white;
+            padding: clamp(12px, 2.5vw, 16px);
+            border-radius: 60px;
+            font-size: var(--font-size-medium);
+            border: none;
+            cursor: pointer;
+            min-height: 48px;
+            transition: all 0.2s;
+        }
+
+        .btn-block:active {
+            transform: scale(0.98);
+        }
+
+        .auth-tabs {
+            display: flex;
+            gap: 16px;
+            margin-bottom: var(--spacing-base);
+        }
+
+        .auth-tab {
+            background: none;
+            border: none;
+            font-size: var(--font-size-medium);
+            padding: 4px 0;
+            color: #a48f7c;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            min-height: 38px;
+        }
+
+        .auth-tab.active {
+            color: #2c241a;
+            border-bottom-color: #2c241a;
+        }
+
+        .auth-tab:active {
+            transform: scale(0.95);
+        }
+
+        hr {
+            margin: var(--spacing-base) 0;
+            border: none;
+            border-top: 1px solid #e8dfd7;
+        }
+
+        /* ===== СВОБОДНАЯ РЕЧЬ ===== */
+        .free-topic-area {
+            margin-bottom: var(--spacing-base);
+        }
+
+        .topic-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .topic-input-group input {
+            flex: 1;
+            min-width: 150px;
+            padding: clamp(10px, 2vw, 14px) clamp(14px, 3vw, 16px);
+            border: 1px solid #e2d9d2;
+            border-radius: 60px;
+            font-size: var(--font-size-small);
+            min-height: 44px;
+        }
+
+        .random-topic-btn {
+            background: #f3efeb;
+            border: none;
+            padding: clamp(6px, 1.5vw, 10px) clamp(12px, 2vw, 16px);
+            border-radius: 40px;
+            font-size: var(--font-size-small);
+            cursor: pointer;
+            min-height: 44px;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .random-topic-btn:active {
+            transform: scale(0.95);
+        }
+
+        .topic-hint {
+            font-size: calc(var(--font-size-small) * 0.85);
+            color: #9a8776;
+            line-height: 1.4;
+        }
+
+        /* ===== АБСУРД ===== */
+        .absurd-mode {
+            margin-bottom: var(--spacing-base);
+        }
+
+        .absurd-mode-buttons {
+            display: flex;
+            gap: clamp(8px, 2vw, 12px);
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .mode-chip {
+            background: #f3efeb;
+            border: none;
+            padding: clamp(6px, 1.5vw, 10px) clamp(16px, 3vw, 24px);
+            border-radius: 40px;
+            font-size: var(--font-size-small);
+            font-weight: 500;
+            cursor: pointer;
+            color: #5a4a38;
+            transition: 0.2s;
+            min-height: 40px;
+        }
+
+        .mode-chip:active {
+            transform: scale(0.95);
+        }
+
+        .mode-chip.active {
+            background: #2c241a;
+            color: white;
+        }
+
+        .warning-box {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 16px;
+            padding: clamp(8px, 1.5vw, 12px) clamp(12px, 2vw, 16px);
+            margin-bottom: var(--spacing-base);
+            font-size: calc(var(--font-size-small) * 0.9);
+            color: #92400e;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .add-btn {
+            background: #e8dfd7;
+            border: none;
+            padding: clamp(6px, 1.5vw, 10px) clamp(12px, 2vw, 16px);
+            border-radius: 40px;
+            font-size: var(--font-size-small);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: var(--spacing-base);
+            min-height: 40px;
+        }
+
+        .add-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* ===== МОДАЛЬНОЕ ОКНО ===== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: var(--spacing-base);
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: clamp(20px, 4vw, 28px);
+            padding: clamp(20px, 4vw, 24px);
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 16px;
+            font-size: var(--font-size-large);
+        }
+
+        .modal-content textarea {
+            width: 100%;
+            margin: 16px 0;
+            padding: 12px;
+            border-radius: 16px;
+            border: 1px solid #e2d9d2;
+            font-family: inherit;
+            resize: vertical;
+            font-size: var(--font-size-small);
+            min-height: 100px;
+        }
+
+        .modal-content input {
+            width: 100%;
+            margin: 8px 0;
+            padding: clamp(10px, 2vw, 14px);
+            border-radius: 16px;
+            border: 1px solid #e2d9d2;
+            font-size: var(--font-size-small);
+            min-height: 44px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .modal-buttons button {
+            padding: clamp(8px, 1.5vw, 12px) clamp(16px, 3vw, 20px);
+            border-radius: 40px;
+            cursor: pointer;
+            font-size: var(--font-size-small);
+            min-height: 40px;
+            transition: all 0.2s;
+        }
+
+        .modal-buttons button:active {
+            transform: scale(0.95);
+        }
+
+        .cancel-btn {
+            background: none;
+            border: 1px solid #e2d9d2;
+        }
+
+        .save-btn {
+            background: #2c241a;
+            color: white;
+            border: none;
+        }
+
+        canvas {
+            max-width: 100%;
+        }
+
+        /* ===== ПРОГРЕСС-БАР ===== */
+        .progress-container {
+            display: none;
+            margin: var(--spacing-base) 0;
+            padding: 12px 16px;
+            background: #f3efe8;
+            border-radius: 12px;
+            position: relative;
+        }
+
+        .progress-container.active {
+            display: block;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #c7b59b;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .progress-text {
+            display: block;
+            font-size: var(--font-size-small);
+            color: #5a4a38;
+            margin-top: 8px;
+            text-align: center;
+        }
+
+        /* ===== АДАПТАЦИЯ ДЛЯ МАЛЕНЬКИХ ЭКРАНОВ ===== */
+        @media (max-width: 400px) {
+            .type-btn {
+                font-size: 0.6rem;
+                padding: 4px 8px;
+                min-height: 32px;
+            }
+
+            .type-btn i {
+                font-size: 0.6rem;
+            }
+
+            .record-panel {
+                gap: 8px;
+                padding: 8px 12px;
+            }
+
+            .record-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 1rem;
+            }
+
+            .timer {
+                font-size: 0.9rem;
+                min-width: 50px;
+            }
+
+            .send-btn {
+                padding: 6px 12px;
+                font-size: 0.7rem;
+                min-height: 32px;
+            }
+        }
+
+        /* ===== ПЛАНШЕТЫ ===== */
+        @media (min-width: 600px) and (max-width: 1024px) {
+            .container {
+                max-width: 90%;
+            }
+
+            .type-btn {
+                padding: 8px 20px;
+                font-size: 0.85rem;
+            }
+        }
+
+        /* ===== ДЕСКТОП ===== */
+        @media (min-width: 1025px) {
+            .container {
+                max-width: 700px;
+            }
+
+            .type-btn:hover {
+                background: #e8dfd7;
+            }
+
+            .type-btn.active:hover {
+                background: #2c241a;
+            }
+
+            .exercise-item:hover {
+                background: #f8f5f1;
+            }
+
+            .record-btn:hover {
+                transform: scale(1.05);
+            }
+
+            .send-btn:hover:not(:disabled) {
+                background: #3d3226;
+            }
+        }
+
+        /* ===== СКРОЛЛБАР ===== */
+        .exercises-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .exercises-list::-webkit-scrollbar-track {
+            background: #f3efe8;
+            border-radius: 4px;
+        }
+
+        .exercises-list::-webkit-scrollbar-thumb {
+            background: #c7b59b;
+            border-radius: 4px;
+        }
+
+        .exercises-list {
+            scrollbar-width: thin;
+        }
+
+        /* ===== АНИМАЦИИ ===== */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        /* ===== TOAST УВЕДОМЛЕНИЯ ===== */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2c241a;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-size: var(--font-size-small);
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            max-width: 90%;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        .toast.error {
+            background: #d9534f;
+        }
+
+        .toast.success {
+            background: #5cb85c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="app"></div>
+
+    <!-- TOAST уведомления -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ===== TOAST СИСТЕМА =====
+        let toastTimeout;
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast show';
+            if (type) toast.classList.add(type);
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // ===== ОСНОВНОЙ КОД =====
+        let currentToken = null;
+        let currentUser = null;
+        let currentType = "tongue";
+        let currentExerciseText = "";
+        let currentExerciseName = "";
+        let mediaRecorder, audioChunks, startTime, recordingTimer;
+        let audioBlob = null;
+        let audioDuration = 0;
+        let isRecording = false;
+        let freeTopics = [];
+        let currentFreeTopic = "";
+        let absurdExercises = {};
+        let currentAbsurdMode = "read";
+        let memoryTimer = null;
+        let myTongueTwisters = [];
+        let myAbsurdTexts = [];
+        let progressChart = null;
+        let audioContext = null;
+        let analyser = null;
+        let dataArray = null;
+        let animationId = null;
+
+        let tongueTwisters = {};
+        let dictionExercises = {};
+        let breathingExercises = {};
+        let articulationExercises = {};
+
+        // ===== СОХРАНЕНИЕ СОСТОЯНИЯ =====
+        function saveState(key, value) {
+            try {
+                localStorage.setItem(`speechcraft_${key}`, JSON.stringify(value));
+            } catch (e) {
+                console.warn('Не удалось сохранить состояние');
+            }
+        }
+
+        function loadState(key) {
+            try {
+                const data = localStorage.getItem(`speechcraft_${key}`);
+                return data ? JSON.parse(data) : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // ===== РЕНДЕРИНГ =====
+        function render() {
+            if (!currentToken) renderAuth();
+            else renderMain();
+        }
+
+        function renderAuth() {
+            document.getElementById('app').innerHTML = `
+                <div class="card">
+                    <div class="logo">speech<span>craft</span></div>
+                    <div class="subhead">тренируй устную речь — просто и с душой</div>
+                    <div class="auth-tabs">
+                        <button class="auth-tab active" data-tab="login">вход</button>
+                        <button class="auth-tab" data-tab="register">регистрация</button>
+                    </div>
+                    <div id="loginForm">
+                        <div class="input-group"><input type="email" id="loginEmail" placeholder="Email" autocomplete="email"></div>
+                        <div class="input-group"><input type="password" id="loginPassword" placeholder="Пароль" autocomplete="current-password"></div>
+                        <button class="btn-block" id="doLoginBtn">войти</button>
+                        <div id="loginError" style="font-size:0.75rem; color:#c56c4a; margin-top:8px;"></div>
+                    </div>
+                    <div id="registerForm" style="display:none;">
+                        <div class="input-group"><input type="email" id="regEmail" placeholder="Email" autocomplete="email"></div>
+                        <div class="input-group"><input type="text" id="regUsername" placeholder="Имя" autocomplete="username"></div>
+                        <div class="input-group"><input type="password" id="regPassword" placeholder="Пароль (6+)" autocomplete="new-password"></div>
+                        <button class="btn-block" id="doRegisterBtn">создать аккаунт</button>
+                        <div id="regError" style="font-size:0.75rem; color:#c56c4a; margin-top:8px;"></div>
+                    </div>
+                </div>
+            `;
+
+            document.querySelectorAll('.auth-tab').forEach(btn => {
+                btn.onclick = () => {
+                    document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+                    btn.classList.add('active');
+                    let isLogin = btn.dataset.tab === 'login';
+                    document.getElementById('loginForm').style.display = isLogin ? 'block' : 'none';
+                    document.getElementById('registerForm').style.display = isLogin ? 'none' : 'block';
+                };
+            });
+
+            document.getElementById('doLoginBtn').onclick = async () => {
+                let fd = new FormData();
+                fd.append('email', document.getElementById('loginEmail').value.trim());
+                fd.append('password', document.getElementById('loginPassword').value);
+                let res = await fetch('/login', { method: 'POST', body: fd });
+                let data = await res.json();
+                if (data.status === 'ok') {
+                    currentToken = data.token;
+                    currentUser = data.username;
+                    localStorage.setItem('token', currentToken);
+                    await loadExercises();
+                    await loadFreeTopics();
+                    await loadAbsurdExercises();
+                    await loadMyData();
+                    render();
+                    showToast('Добро пожаловать, ' + currentUser + '! 👋', 'success');
+                } else {
+                    document.getElementById('loginError').innerText = data.message;
+                }
+            };
+
+            document.getElementById('doRegisterBtn').onclick = async () => {
+                let fd = new FormData();
+                fd.append('email', document.getElementById('regEmail').value.trim());
+                fd.append('username', document.getElementById('regUsername').value.trim());
+                fd.append('password', document.getElementById('regPassword').value);
+                let res = await fetch('/register', { method: 'POST', body: fd });
+                let data = await res.json();
+                if (data.status === 'ok') {
+                    document.querySelector('.auth-tab[data-tab="login"]').click();
+                    showToast('Аккаунт создан! Войдите в систему ✅', 'success');
+                } else {
+                    document.getElementById('regError').innerText = data.message;
+                }
+            };
+        }
+
+        async function loadFreeTopics() {
+            let res = await fetch('/free_topics');
+            freeTopics = await res.json();
+        }
+
+        async function loadAbsurdExercises() {
+            let res = await fetch('/absurd_exercises');
+            absurdExercises = await res.json();
+        }
+
+        async function loadMyData() {
+            let [t, a] = await Promise.all([
+                fetch(`/my_tongue_twisters?token=${currentToken}`).then(r=>r.json()),
+                fetch(`/my_absurd_texts?token=${currentToken}`).then(r=>r.json())
+            ]);
+            myTongueTwisters = t;
+            myAbsurdTexts = a;
+        }
+
+        async function loadExercises() {
+            let [t,d,b,a] = await Promise.all([
+                fetch('/tongue_twisters').then(r=>r.json()),
+                fetch('/diction_exercises').then(r=>r.json()),
+                fetch('/breathing_exercises').then(r=>r.json()),
+                fetch('/articulation_exercises').then(r=>r.json())
+            ]);
+            tongueTwisters = t;
+            dictionExercises = d;
+            breathingExercises = b;
+            articulationExercises = a;
+        }
+
+        async function deleteTongueTwister(id, event) {
+            event.stopPropagation();
+            if (!confirm('Удалить эту скороговорку?')) return;
+            let fd = new FormData();
+            fd.append('id', id);
+            fd.append('token', currentToken);
+            let res = await fetch('/delete_tongue_twister', { method: 'POST', body: fd });
+            let data = await res.json();
+            if (data.status === 'ok') {
+                await loadMyData();
+                renderMain();
+                showToast('Скороговорка удалена 🗑️', 'info');
+            } else {
+                showToast(data.message, 'error');
+            }
+        }
+
+        async function deleteAbsurdText(id, event) {
+            event.stopPropagation();
+            if (!confirm('Удалить этот текст?')) return;
+            let fd = new FormData();
+            fd.append('id', id);
+            fd.append('token', currentToken);
+            let res = await fetch('/delete_absurd_text', { method: 'POST', body: fd });
+            let data = await res.json();
+            if (data.status === 'ok') {
+                await loadMyData();
+                renderMain();
+                showToast('Текст удалён 🗑️', 'info');
+            } else {
+                showToast(data.message, 'error');
+            }
+        }
+
+        function showAddTongueTwisterModal() {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.display = 'flex';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <h3>Новая скороговорка</h3>
+                    <textarea id="newTwisterText" rows="4" placeholder="Введите текст скороговорки..."></textarea>
+                    <div class="modal-buttons">
+                        <button class="cancel-btn" onclick="this.closest('.modal').remove()">Отмена</button>
+                        <button class="save-btn" id="saveTwisterBtn">Сохранить</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            document.getElementById('saveTwisterBtn').onclick = async () => {
+                const text = document.getElementById('newTwisterText').value.trim();
+                if (!text) { showToast('Введите текст', 'error'); return; }
+                let fd = new FormData();
+                fd.append('text', text);
+                fd.append('token', currentToken);
+                let res = await fetch('/add_tongue_twister', { method: 'POST', body: fd });
+                let data = await res.json();
+                if (data.status === 'ok') {
+                    await loadMyData();
+                    renderMain();
+                    showToast('Скороговорка добавлена ✅', 'success');
+                } else { showToast(data.message, 'error'); }
+                modal.remove();
+            };
+        }
+
+        function showAddAbsurdModal() {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.display = 'flex';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <h3>Новый абсурдный текст</h3>
+                    <input type="text" id="newAbsurdName" placeholder="Название (например: Мой текст)">
+                    <textarea id="newAbsurdText" rows="6" placeholder="Введите текст..."></textarea>
+                    <div class="modal-buttons">
+                        <button class="cancel-btn" onclick="this.closest('.modal').remove()">Отмена</button>
+                        <button class="save-btn" id="saveAbsurdBtn">Сохранить</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            document.getElementById('saveAbsurdBtn').onclick = async () => {
+                const name = document.getElementById('newAbsurdName').value.trim();
+                const text = document.getElementById('newAbsurdText').value.trim();
+                if (!name || !text) { showToast('Заполните все поля', 'error'); return; }
+                let fd = new FormData();
+                fd.append('name', name);
+                fd.append('text', text);
+                fd.append('token', currentToken);
+                let res = await fetch('/add_absurd_text', { method: 'POST', body: fd });
+                let data = await res.json();
+                if (data.status === 'ok') {
+                    await loadMyData();
+                    renderMain();
+                    showToast('Текст добавлен ✅', 'success');
+                } else { showToast(data.message, 'error'); }
+                modal.remove();
+            };
+        }
+
+        async function loadProgressChart() {
+            const res = await fetch(`/progress_data?token=${currentToken}`);
+            const data = await res.json();
+
+            const ctx = document.getElementById('progressChart').getContext('2d');
+            if (progressChart) progressChart.destroy();
+
+            progressChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.dates,
+                    datasets: [{
+                        label: 'Средняя оценка за день',
+                        data: data.scores,
+                        borderColor: '#c7b59b',
+                        backgroundColor: 'rgba(199, 181, 155, 0.1)',
+                        tension: 0.3,
+                        fill: true,
+                        pointBackgroundColor: '#2c241a',
+                        pointBorderColor: '#2c241a',
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: 100,
+                            title: { display: true, text: 'Оценка' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Дата' }
+                        }
+                    },
+                    plugins: {
+                        tooltip: { callbacks: { label: (ctx) => `${ctx.raw} / 100` } }
+                    }
+                }
+            });
+        }
+
+        function renderMain() {
+            let typeButtons = `
+                <button class="type-btn ${currentType === 'tongue' ? 'active' : ''}" data-type="tongue"><i class="fas fa-comment-dots"></i> скороговорки</button>
+                <button class="type-btn ${currentType === 'diction' ? 'active' : ''}" data-type="diction"><i class="fas fa-volume-up"></i> дикция</button>
+                <button class="type-btn ${currentType === 'breathing' ? 'active' : ''}" data-type="breathing"><i class="fas fa-lungs"></i> дыхание</button>
+                <button class="type-btn ${currentType === 'articulation' ? 'active' : ''}" data-type="articulation"><i class="fas fa-smile-wink"></i> артикуляция</button>
+                <button class="type-btn ${currentType === 'free' ? 'active' : ''}" data-type="free"><i class="fas fa-microphone-alt"></i> свободная речь</button>
+                <button class="type-btn ${currentType === 'absurd' ? 'active' : ''}" data-type="absurd"><i class="fas fa-brain"></i> абсурд-тренинг</button>
+                <button class="type-btn ${currentType === 'history' ? 'active' : ''}" data-type="history"><i class="fas fa-history"></i> история</button>
+                <button class="type-btn ${currentType === 'progress' ? 'active' : ''}" data-type="progress"><i class="fas fa-chart-line"></i> прогресс</button>
+            `;
+
+            let listHtml = '';
+            let etalonHtml = '';
+            let freeTopicHtml = '';
+            let absurdModeHtml = '';
+            let warningHtml = '';
+            let addButtonHtml = '';
+
+            if (currentType === 'tongue') {
+                addButtonHtml = `<button class="add-btn" id="addTwisterBtn"><i class="fas fa-plus"></i> Добавить свою скороговорку</button>`;
+                let standardHtml = Object.entries(tongueTwisters).map(([id,text]) => `<div class="exercise-item" data-text="${text.replace(/"/g, '&quot;')}" data-name="скороговорка ${id}">${text}</div>`).join('');
+                let myHtml = myTongueTwisters.map(item => `
+                    <div class="exercise-item" data-text="${item.text.replace(/"/g, '&quot;')}" data-name="Моя скороговорка" data-id="${item.id}" data-type="my">
+                        <span>📝 ${item.text}</span>
+                        <i class="fas fa-trash-alt delete-icon" onclick="deleteTongueTwister(${item.id}, event)"></i>
+                    </div>
+                `).join('');
+                listHtml = standardHtml + (myHtml ? `<div style="margin-top: 12px; border-top: 1px solid #e8dfd7; padding-top: 12px;"><strong>Мои скороговорки</strong></div>${myHtml}` : '');
+                etalonHtml = currentExerciseText ? `<div class="etalon-box">${currentExerciseText}</div>` : '<div class="etalon-box">выбери скороговорку</div>';
+            } else if (currentType === 'diction') {
+                listHtml = Object.entries(dictionExercises).map(([id,item]) => `<div class="exercise-item" data-text="${item.text.replace(/"/g, '&quot;')}" data-name="${item.name}"><strong>${item.name}</strong><br><span style="font-size:0.8rem; color:#9a8776;">${item.text}</span></div>`).join('');
+                etalonHtml = currentExerciseText ? `<div class="etalon-box">${currentExerciseText}</div>` : '<div class="etalon-box">выбери упражнение</div>';
+            } else if (currentType === 'breathing') {
+                listHtml = Object.entries(breathingExercises).map(([id,item]) => `
+                    <div class="info-card">
+                        <div class="title"><i class="fas fa-lungs"></i> ${item.name}</div>
+                        <div class="description">${item.description}</div>
+                        <div class="tips">💡 ${item.tips}</div>
+                    </div>
+                `).join('');
+                etalonHtml = `<div class="etalon-box">дыхательные упражнения — выполняй без записи</div>`;
+            } else if (currentType === 'articulation') {
+                listHtml = Object.entries(articulationExercises).map(([id,item]) => `
+                    <div class="info-card">
+                        <div class="title"><i class="fas fa-smile-wink"></i> ${item.name}</div>
+                        <div class="description">${item.description}</div>
+                        <div class="tips">💡 ${item.tips}</div>
+                    </div>
+                `).join('');
+                etalonHtml = `<div class="etalon-box">артикуляционная гимнастика — выполняй без записи</div>`;
+            } else if (currentType === 'free') {
+                freeTopicHtml = `
+                    <div class="free-topic-area">
+                        <div class="topic-input-group">
+                            <input type="text" id="freeTopicInput" placeholder="тема (необязательно)" value="${currentFreeTopic}">
+                            <button class="random-topic-btn" id="randomTopicBtn"><i class="fas fa-dice"></i> случайная тема</button>
+                        </div>
+                        <div class="topic-hint">Можешь выбрать тему или говорить о чём хочешь. Тема поможет точнее оценить раскрытие</div>
+                    </div>
+                `;
+                etalonHtml = `<div class="etalon-box"><i class="fas fa-microphone-alt"></i> свободная речь — говори о чём хочешь</div>`;
+            } else if (currentType === 'absurd') {
+                addButtonHtml = `<button class="add-btn" id="addAbsurdBtn"><i class="fas fa-plus"></i> Добавить свой абсурдный текст</button>`;
+                warningHtml = `<div class="warning-box"><i class="fas fa-info-circle"></i> Сложные тексты для тренировки дикции и артикуляции. Оценка фонетики не отображается.</div>`;
+                let absurdHtml = '';
+                for (const [key, exercise] of Object.entries(absurdExercises)) {
+                    absurdHtml += `<div class="exercise-item" data-exercise-id="${key}" data-exercise-name="${exercise.name}"><strong>${exercise.name}</strong></div>`;
+                    for (const [partId, partText] of Object.entries(exercise.parts)) {
+                        absurdHtml += `<div class="part-item" data-parent="${key}" data-part-id="${partId}" data-text="${partText.replace(/"/g, '&quot;')}" data-name="${exercise.name} — часть ${partId}">Часть ${partId}: ${partText.substring(0, 80)}...</div>`;
+                    }
+                }
+                let myHtml = myAbsurdTexts.map(item => {
+                    return `<div class="part-item" data-text="${item.text.replace(/"/g, '&quot;')}" data-name="${item.name}" data-id="${item.id}" data-type="my">
+                                <span>📝 ${item.name}</span>
+                                <i class="fas fa-trash-alt delete-icon" onclick="deleteAbsurdText(${item.id}, event)"></i>
+                            </div>`;
+                }).join('');
+                absurdHtml += myHtml ? `<div style="margin-top: 12px; border-top: 1px solid #e8dfd7; padding-top: 12px;"><strong>Мои тексты</strong></div>${myHtml}` : '';
+                listHtml = absurdHtml;
+                etalonHtml = currentExerciseText ? `<div class="etalon-box" id="absurdEtalon">${currentExerciseText}</div>` : '<div class="etalon-box">выбери упражнение</div>';
+
+                absurdModeHtml = `
+                    <div class="absurd-mode">
+                        <div class="absurd-mode-buttons">
+                            <button class="mode-chip ${currentAbsurdMode === 'read' ? 'active' : ''}" data-absurd-mode="read">прочитать вслух</button>
+                            <button class="mode-chip ${currentAbsurdMode === 'memory' ? 'active' : ''}" data-absurd-mode="memory">повторить по памяти</button>
+                        </div>
+                    </div>
+                `;
+            } else if (currentType === 'history') {
+                listHtml = '';
+                etalonHtml = '';
+            } else if (currentType === 'progress') {
+                listHtml = '';
+                etalonHtml = '';
+            }
+
+            document.getElementById('app').innerHTML = `
+                <div class="card">
+                    <div class="top-bar">
+                        <div class="logo">speech<span>craft</span></div>
+                        <button class="logout-btn" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> выход</button>
+                    </div>
+                    <div class="type-row">${typeButtons}</div>
+                    ${freeTopicHtml}
+                    ${warningHtml}
+                    ${absurdModeHtml}
+                    ${addButtonHtml}
+                    ${(currentType !== 'free' && currentType !== 'absurd' && currentType !== 'history' && currentType !== 'progress') ? `<div class="exercises-list" id="exercisesList">${listHtml}</div>` : ''}
+                    ${currentType === 'absurd' ? `<div class="exercises-list" id="exercisesList">${listHtml}</div>` : ''}
+                    ${etalonHtml}
+
+                    <!-- ВИЗУАЛИЗАТОР -->
+                    <div class="visualizer-container" id="visualizerContainer">
+                        <canvas id="audioVisualizer"></canvas>
+                        <div class="visualizer-label">🎤 говорите...</div>
+                    </div>
+
+                    <div class="record-panel">
+                        <button class="record-btn" id="recordBtn"><i class="fas fa-microphone"></i></button>
+                        <div class="timer" id="timer">00:00</div>
+                        <button class="send-btn" id="sendBtn" disabled>отправить</button>
+                    </div>
+                    <div class="record-status" id="recordStatus"></div>
+
+                    <!-- ПРОГРЕСС-БАР -->
+                    <div class="progress-container" id="progressContainer">
+                        <div class="progress-bar" id="progressBar"></div>
+                        <div class="progress-text" id="progressText">0%</div>
+                    </div>
+
+                    <div id="resultArea" class="result-area"></div>
+                    <hr>
+                    <div id="historyArea"></div>
+                    <div id="statsArea"></div>
+                </div>
+            `;
+
+            if (currentType === 'tongue') {
+                document.getElementById('addTwisterBtn')?.addEventListener('click', showAddTongueTwisterModal);
+            }
+            if (currentType === 'absurd') {
+                document.getElementById('addAbsurdBtn')?.addEventListener('click', showAddAbsurdModal);
+            }
+
+            document.querySelectorAll('.type-btn').forEach(btn => {
+                btn.onclick = () => {
+                    if (memoryTimer) clearTimeout(memoryTimer);
+                    currentType = btn.dataset.type;
+                    currentExerciseText = '';
+                    currentExerciseName = '';
+                    currentAbsurdMode = 'read';
+                    // Восстанавливаем состояние
+                    const saved = loadState('current_exercise');
+                    if (saved && saved.type === currentType) {
+                        currentExerciseText = saved.text;
+                        currentExerciseName = saved.name;
+                    }
+                    renderMain();
+                };
+            });
+
+            if (currentType === 'absurd') {
+                document.querySelectorAll('[data-absurd-mode]').forEach(btn => {
+                    btn.onclick = () => {
+                        currentAbsurdMode = btn.dataset.absurdMode;
+                        renderMain();
+                    };
+                });
+
+                document.querySelectorAll('.exercise-item').forEach(el => {
+                    el.onclick = () => {
+                        document.querySelectorAll('.exercise-item').forEach(e => e.classList.remove('selected'));
+                        el.classList.add('selected');
+                    };
+                });
+
+                document.querySelectorAll('.part-item').forEach(el => {
+                    el.onclick = async () => {
+                        if (el.dataset.type === 'my') return;
+                        document.querySelectorAll('.part-item').forEach(e => e.classList.remove('selected'));
+                        el.classList.add('selected');
+                        let text = el.dataset.text || '';
+                        let name = el.dataset.name || '';
+                        currentExerciseText = text;
+                        currentExerciseName = name;
+
+                        // Сохраняем состояние
+                        saveState('current_exercise', { type: currentType, text, name });
+
+                        let fd = new FormData();
+                        fd.append('text', text);
+                        fd.append('name', name);
+                        await fetch('/set_etalon', { method: 'POST', body: fd });
+
+                        if (currentAbsurdMode === 'memory') {
+                            const etalonDiv = document.getElementById('absurdEtalon');
+                            if (etalonDiv) {
+                                etalonDiv.innerHTML = `<div style="color: green;">⏳ Запомните текст (5 секунд)...</div><div style="margin-top: 10px; font-size: 0.9rem;">${text}</div>`;
+                                if (memoryTimer) clearTimeout(memoryTimer);
+                                memoryTimer = setTimeout(() => {
+                                    if (etalonDiv) {
+                                        etalonDiv.innerHTML = `<div style="color: #c56c4a;">🧠 Текст скрыт. Воспроизведите по памяти!</div>`;
+                                    }
+                                }, 5000);
+                            }
+                        } else {
+                            renderMain();
+                        }
+                    };
+                });
+            }
+
+            if (currentType !== 'free' && currentType !== 'absurd' && currentType !== 'breathing' && currentType !== 'articulation' && currentType !== 'history' && currentType !== 'progress') {
+                document.querySelectorAll('.exercise-item').forEach(el => {
+                    if (el.dataset.type === 'my') return;
+                    el.onclick = async () => {
+                        document.querySelectorAll('.exercise-item').forEach(e => e.classList.remove('selected'));
+                        el.classList.add('selected');
+                        let text = el.dataset.text || '';
+                        let name = el.dataset.name || '';
+                        if (currentType === 'breathing' || currentType === 'articulation') {
+                            currentExerciseText = '';
+                            currentExerciseName = name;
+                        } else {
+                            currentExerciseText = text;
+                            currentExerciseName = name;
+                            // Сохраняем состояние
+                            saveState('current_exercise', { type: currentType, text, name });
+
+                            let fd = new FormData();
+                            fd.append('text', text);
+                            fd.append('name', name);
+                            await fetch('/set_etalon', { method: 'POST', body: fd });
+                        }
+                        renderMain();
+                    };
+                });
+            }
+
+            if (currentType === 'free') {
+                document.getElementById('randomTopicBtn').onclick = () => {
+                    if (freeTopics.length > 0) {
+                        let randomIndex = Math.floor(Math.random() * freeTopics.length);
+                        currentFreeTopic = freeTopics[randomIndex];
+                        document.getElementById('freeTopicInput').value = currentFreeTopic;
+                    }
+                };
+                document.getElementById('freeTopicInput').oninput = (e) => {
+                    currentFreeTopic = e.target.value;
+                };
+            }
+
+            document.getElementById('logoutBtn').onclick = async () => {
+                if (currentToken) { let fd = new FormData(); fd.append('token', currentToken); await fetch('/logout', { method: 'POST', body: fd }); }
+                localStorage.removeItem('token');
+                currentToken = null;
+                render();
+                showToast('Вы вышли из системы 👋', 'info');
+            };
+
+            attachRecorder();
+            loadHistoryAndStats();
+        }
+
+        // ===== ВИЗУАЛИЗАТОР =====
+        function initVisualizer(stream) {
+            const container = document.getElementById('visualizerContainer');
+            const canvas = document.getElementById('audioVisualizer');
+
+            if (!canvas) return;
+
+            container.classList.add('active');
+
+            // Настраиваем размер canvas
+            const rect = container.getBoundingClientRect();
+            canvas.width = container.clientWidth - 16;
+            canvas.height = 50;
+
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            const source = audioContext.createMediaStreamSource(stream);
+            source.connect(analyser);
+            analyser.fftSize = 256;
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+            const ctx = canvas.getContext('2d');
+
+            function draw() {
+                if (!isRecording) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    return;
+                }
+
+                analyser.getByteTimeDomainData(dataArray);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.beginPath();
+                ctx.strokeStyle = '#2c241a';
+                ctx.lineWidth = 2;
+
+                const step = canvas.width / dataArray.length;
+
+                for (let i = 0; i < dataArray.length; i++) {
+                    const value = dataArray[i] / 128.0;
+                    const y = (value * canvas.height) / 2;
+
+                    if (i === 0) {
+                        ctx.moveTo(0, y);
+                    } else {
+                        ctx.lineTo(i * step, y);
+                    }
+                }
+
+                ctx.stroke();
+                animationId = requestAnimationFrame(draw);
+            }
+
+            draw();
+        }
+
+        function stopVisualizer() {
+            const container = document.getElementById('visualizerContainer');
+            container.classList.remove('active');
+
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+
+            if (audioContext && audioContext.state !== 'closed') {
+                audioContext.close();
+                audioContext = null;
+            }
+
+            analyser = null;
+            dataArray = null;
+        }
+
+        // ===== ПРОГРЕСС-БАР =====
+        function showProgress(percent, text) {
+            const container = document.getElementById('progressContainer');
+            const bar = document.getElementById('progressBar');
+            const label = document.getElementById('progressText');
+
+            container.classList.add('active');
+            bar.style.width = `${Math.min(100, percent)}%`;
+            label.textContent = `${text || ''} ${Math.min(100, percent)}%`;
+
+            if (percent >= 100) {
+                setTimeout(() => {
+                    container.classList.remove('active');
+                }, 1000);
+            }
+        }
+
+        // ===== ЗАПИСЬ =====
+        function attachRecorder() {
+            const recordBtn = document.getElementById('recordBtn');
+            const sendBtn = document.getElementById('sendBtn');
+            const timerEl = document.getElementById('timer');
+            const statusEl = document.getElementById('recordStatus');
+
+            recordBtn.onclick = async () => {
+                if (currentType === 'breathing' || currentType === 'articulation') {
+                    showToast('это упражнение не требует записи', 'info');
+                    return;
+                }
+
+                if (currentType !== 'free' && !currentExerciseText) {
+                    showToast('сначала выбери упражнение', 'info');
+                    return;
+                }
+
+                if (isRecording) {
+                    if (mediaRecorder) {
+                        mediaRecorder.stop();
+                        if (mediaRecorder.stream) mediaRecorder.stream.getTracks().forEach(t => t.stop());
+                    }
+                    clearInterval(recordingTimer);
+                    recordBtn.classList.remove('recording');
+                    isRecording = false;
+                    stopVisualizer();
+                    statusEl.innerText = 'запись остановлена';
+                    showToast('Запись остановлена ⏹️', 'info');
+                    return;
+                }
+
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                    // Инициализируем визуализатор
+                    initVisualizer(stream);
+
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+
+                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                    mediaRecorder.onstop = () => {
+                        audioDuration = (Date.now() - startTime) / 1000;
+                        audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        statusEl.innerText = `записано ${audioDuration.toFixed(1)} сек`;
+                        sendBtn.disabled = false;
+                        showToast(`Записано ${audioDuration.toFixed(1)} секунд 🎤`, 'success');
+                    };
+
+                    mediaRecorder.start();
+                    startTime = Date.now();
+                    recordingTimer = setInterval(() => {
+                        let el = (Date.now() - startTime) / 1000;
+                        timerEl.innerText = `${Math.floor(el/60).toString().padStart(2,'0')}:${Math.floor(el%60).toString().padStart(2,'0')}`;
+                    }, 100);
+                    recordBtn.classList.add('recording');
+                    isRecording = true;
+                    statusEl.innerText = 'запись... нажми ещё раз на микрофон для остановки';
+                    showToast('🎙️ Идёт запись...', 'info');
+                } catch (e) {
+                    showToast('Нет доступа к микрофону! Проверьте разрешения.', 'error');
+                    console.error(e);
+                }
+            };
+
+            sendBtn.onclick = async () => {
+                if (!audioBlob) return;
+
+                let resultDiv = document.getElementById('resultArea');
+                let statusTimeout;
+
+                function setStatus(message, percent = null) {
+                    let progressMsg = message;
+                    if (percent !== null) {
+                        showProgress(percent, message);
+                    } else {
+                        showProgress(90, message);
+                    }
+                    resultDiv.innerHTML = `<div style="text-align:center; padding:20px;">⏳ ${message}</div>`;
+                }
+
+                setStatus('подготовка аудио...', 5);
+
+                const timeoutPromise = new Promise((_, reject) => {
+                    statusTimeout = setTimeout(() => reject(new Error('Превышено время ожидания (30 сек)')), 30000);
+                });
+
+                let fd = new FormData();
+                fd.append('file', audioBlob, 'recording.wav');
+                fd.append('duration', audioDuration);
+                fd.append('token', currentToken);
+
+                let progressInterval;
+                let currentPercent = 10;
+
+                if (currentType === 'free') {
+                    let topic = document.getElementById('freeTopicInput')?.value || '';
+                    fd.append('topic', topic);
+
+                    setStatus('отправка аудио...', 10);
+                    progressInterval = setInterval(() => {
+                        if (currentPercent < 60) {
+                            currentPercent += 5;
+                            setStatus('распознавание речи...', currentPercent);
+                        }
+                    }, 800);
+
+                    try {
+                        const res = await Promise.race([
+                            fetch('/analyze_free', { method: 'POST', body: fd }),
+                            timeoutPromise
+                        ]);
+                        clearTimeout(statusTimeout);
+                        clearInterval(progressInterval);
+
+                        setStatus('обработка результата...', 90);
+                        await new Promise(r => setTimeout(r, 100));
+
+                        const data = await res.json();
+                        if (data.error) { showToast(data.error, 'error'); return; }
+                        resultDiv.innerHTML = `
+                            <div class="feedback-block">
+                                <div style="white-space: pre-wrap;">${data.detailed_feedback}</div>
+                            </div>
+                        `;
+                        showProgress(100, 'Готово!');
+                        showToast('Анализ завершён ✅', 'success');
+                    } catch (err) {
+                        clearTimeout(statusTimeout);
+                        clearInterval(progressInterval);
+                        resultDiv.innerHTML = `<div style="text-align:center; padding:20px; color:#c56c4a;">❌ ${err.message || 'Ошибка анализа'}</div>`;
+                        showToast('Ошибка анализа', 'error');
+                    }
+                } else if (currentType === 'absurd') {
+                    fd.append('mode', 'strict');
+
+                    setStatus('отправка аудио...', 10);
+                    progressInterval = setInterval(() => {
+                        if (currentPercent < 40) {
+                            currentPercent += 3;
+                            setStatus('распознавание...', currentPercent);
+                        } else if (currentPercent < 70) {
+                            currentPercent += 2;
+                            setStatus('обработка речи...', currentPercent);
+                        }
+                    }, 600);
+
+                    try {
+                        const res = await Promise.race([
+                            fetch('/analyze', { method: 'POST', body: fd }),
+                            timeoutPromise
+                        ]);
+                        clearTimeout(statusTimeout);
+                        clearInterval(progressInterval);
+
+                        setStatus('обработка результата...', 95);
+                        await new Promise(r => setTimeout(r, 150));
+
+                        const data = await res.json();
+                        if (data.error) { showToast(data.error, 'error'); return; }
+
+                        let tempo = Math.round(data.tempo_score);
+                        let clean = Math.round(data.stop_words_score);
+
+                        let tempoText = '';
+                        if (data.words_per_minute < 60) tempoText = 'очень медленно. Попробуй говорить быстрее';
+                        else if (data.words_per_minute < 80) tempoText = 'можно чуть быстрее';
+                        else if (data.words_per_minute <= 100) tempoText = 'идеальный темп для сложного текста';
+                        else if (data.words_per_minute <= 130) tempoText = 'хорошо';
+                        else tempoText = 'очень быстро для такого текста';
+
+                        resultDiv.innerHTML = `
+                            <div class="feedback-block">
+                                <div><strong>Упражнение:</strong> ${currentExerciseName}</div>
+                                <div><strong>Темп:</strong> ${data.words_per_minute} слов/мин — ${tempoText}</div>
+                                <div><strong>Чистота:</strong> ${clean >= 100 ? 'слова-паразиты не обнаружены' : clean >= 70 ? 'есть слова-паразиты' : 'много слов-паразитов'}</div>
+                                <div class="recognized-box">
+                                    <strong>Распознано:</strong><br>
+                                    ${data.recognized_text || '(не распознано)'}
+                                </div>
+                            </div>
+                            <div style="font-size:0.7rem; color:#b8aa9a; margin-top:8px;">${data.duration} сек · ${data.words_per_minute} слов/мин</div>
+                        `;
+                        showProgress(100, 'Готово!');
+                        showToast('Анализ завершён ✅', 'success');
+                    } catch (err) {
+                        clearTimeout(statusTimeout);
+                        clearInterval(progressInterval);
+                        resultDiv.innerHTML = `<div style="text-align:center; padding:20px; color:#c56c4a;">❌ ${err.message || 'Ошибка анализа'}</div>`;
+                        showToast('Ошибка анализа', 'error');
+                    }
+                } else {
+                    fd.append('mode', 'strict');
+
+                    setStatus('отправка аудио...', 10);
+                    progressInterval = setInterval(() => {
+                        if (currentPercent < 60) {
+                            currentPercent += 5;
+                            setStatus('распознавание речи...', currentPercent);
+                        } else if (currentPercent < 85) {
+                            currentPercent += 3;
+                            setStatus('сравнение с эталоном...', currentPercent);
+                        }
+                    }, 700);
+
+                    try {
+                        const res = await Promise.race([
+                            fetch('/analyze', { method: 'POST', body: fd }),
+                            timeoutPromise
+                        ]);
+                        clearTimeout(statusTimeout);
+                        clearInterval(progressInterval);
+
+                        setStatus('обработка результата...', 95);
+                        await new Promise(r => setTimeout(r, 100));
+
+                        const data = await res.json();
+                        if (data.error) { showToast(data.error, 'error'); return; }
+
+                        let phon = Math.round(data.phonetics_score);
+                        let lex = Math.round(data.lexical_score);
+                        let tempo = Math.round(data.tempo_score);
+                        let clean = Math.round(data.stop_words_score);
+                        let total = Math.round(data.final_score);
+
+                        let lexicalText = '';
+                        if (lex >= 86) lexicalText = 'все ключевые слова на месте';
+                        else if (lex >= 61) lexicalText = 'часть ключевых слов пропущена';
+                        else if (lex >= 31) lexicalText = 'большая часть эталонных слов пропущена';
+                        else if (lex >= 0) lexicalText = 'слова из эталона не прозвучали';
+
+                        let tempoText = '';
+                        if (data.words_per_minute < 80) tempoText = 'очень медленно. Попробуй говорить быстрее';
+                        else if (data.words_per_minute < 100) tempoText = 'ниже нормы (норма 100–140). Стоит ускориться';
+                        else if (data.words_per_minute <= 140) tempoText = 'идеально';
+                        else if (data.words_per_minute <= 170) tempoText = 'выше нормы (норма 100–140). Попробуй чуть медленнее';
+                        else tempoText = 'очень быстро. Попробуй замедлиться';
+
+                        resultDiv.innerHTML = `
+                            <div class="feedback-block">
+                                <div><strong>Упражнение:</strong> ${currentExerciseName}</div>
+                                <div><strong>Совпадение с эталоном:</strong> ${phon}%</div>
+                                <div><strong>Ключевые слова:</strong> ${lexicalText || lex + '%'}</div>
+                                <div><strong>Темп:</strong> ${data.words_per_minute} слов/мин — ${tempoText}</div>
+                                <div><strong>Чистота:</strong> ${clean >= 100 ? 'слова-паразиты не обнаружены' : clean >= 70 ? 'есть слова-паразиты' : 'много слов-паразитов'}</div>
+                                <div><strong>Общая оценка:</strong> ${total} / 100</div>
+                                <div class="recognized-box">
+                                    <strong>Распознано:</strong><br>
+                                    ${data.recognized_text || '(не распознано)'}
+                                </div>
+                            </div>
+                            <div style="font-size:0.7rem; color:#b8aa9a; margin-top:8px;">${data.duration} сек · ${data.words_per_minute} слов/мин</div>
+                        `;
+                        showProgress(100, 'Готово!');
+                        showToast('Анализ завершён ✅', 'success');
+                    } catch (err) {
+                        clearTimeout(statusTimeout);
+                        clearInterval(progressInterval);
+                        resultDiv.innerHTML = `<div style="text-align:center; padding:20px; color:#c56c4a;">❌ ${err.message || 'Ошибка анализа'}</div>`;
+                        showToast('Ошибка анализа', 'error');
+                    }
+                }
+
+                sendBtn.disabled = false;
+                loadHistoryAndStats();
+            };
+        }
+
+        async function loadHistoryAndStats() {
+            if (!currentToken) return;
+            let hist = await fetch(`/history?token=${currentToken}`).then(r=>r.json());
+            let stats = await fetch(`/stats?token=${currentToken}`).then(r=>r.json());
+
+            if (currentType === 'progress') {
+                const chartHtml = `
+                    <div class="stats-grid">
+                        <div class="stat-card">средняя<br><strong>${Math.round(stats.avg_score)}/100</strong></div>
+                        <div class="stat-card">лучшая<br><strong>${Math.round(stats.max_score)}/100</strong></div>
+                        <div class="stat-card">тренировок<br><strong>${stats.total_trainings}</strong></div>
+                    </div>
+                    <div class="progress-chart-container">
+                        <canvas id="progressChart" width="400" height="200" style="width:100%; max-width:600px; margin:0 auto; display:block;"></canvas>
+                    </div>
+                `;
+                document.getElementById('historyArea').innerHTML = '';
+                document.getElementById('statsArea').innerHTML = chartHtml;
+                await loadProgressChart();
+            } else {
+                let historyHtml = `<div><strong>последние тренировки</strong><div style="margin-top:8px;">`;
+                if (!hist.length) historyHtml += `<div style="color:#b8aa9a;">пока нет</div>`;
+                else hist.slice(0,5).forEach(h => { historyHtml += `<div class="history-item">${h.exercise_name} · ${Math.round(h.final_score)}/100 · ${new Date(h.created_at).toLocaleDateString()}</div>`; });
+                historyHtml += `</div></div>`;
+                let statsHtml = `<div class="stats-grid">
+                    <div class="stat-card">средняя<br><strong>${Math.round(stats.avg_score)}/100</strong></div>
+                    <div class="stat-card">лучшая<br><strong>${Math.round(stats.max_score)}/100</strong></div>
+                    <div class="stat-card">тренировок<br><strong>${stats.total_trainings}</strong></div>
+                </div>`;
+                document.getElementById('historyArea').innerHTML = historyHtml;
+                document.getElementById('statsArea').innerHTML = statsHtml;
+            }
+        }
+
+        // ===== ИНИЦИАЛИЗАЦИЯ =====
+        (async () => {
+            let saved = localStorage.getItem('token');
+            if (saved) {
+                let res = await fetch(`/current_user?token=${saved}`);
+                let data = await res.json();
+                if (data.status === 'ok') {
+                    currentToken = saved;
+                    currentUser = data.username;
+                    await loadExercises();
+                    await loadFreeTopics();
+                    await loadAbsurdExercises();
+                    await loadMyData();
+                    // Восстанавливаем состояние
+                    const savedExercise = loadState('current_exercise');
+                    if (savedExercise) {
+                        currentType = savedExercise.type || 'tongue';
+                        currentExerciseText = savedExercise.text || '';
+                        currentExerciseName = savedExercise.name || '';
+                    }
+                    render();
+                    return;
+                }
+            }
+            render();
+        })();
+    </script>
+</body>
+</html>
