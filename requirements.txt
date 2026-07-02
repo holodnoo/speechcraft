@@ -1,6 +1,5 @@
 fastapi
 uvicorn
-faster-whisper
 bcrypt
 ffmpeg-python
 python-multipart

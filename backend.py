@@ -1,12 +1,10 @@
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from faster_whisper import WhisperModel
 import json
 import os
 import tempfile
 import uvicorn
-import subprocess
 import sqlite3
 import re
 import uuid
@@ -87,11 +85,6 @@ def init_db():
 init_db()
 session_user = {}
 
-# ========== ЗАГРУЗКА МОДЕЛИ faster-whisper ==========
-print("Загрузка модели faster-whisper (tiny)...")
-whisper_model = WhisperModel("tiny", device="cpu", compute_type="int8")
-print("Модель faster-whisper загружена!")
-
 # ========== БИБЛИОТЕКА УПРАЖНЕНИЙ ==========
 TONGUE_TWISTERS = {
     "1": "На дворе трава на траве дрова",
@@ -168,132 +161,11 @@ FREE_TOPICS = [
 
 
 def clean_text(text):
-    """Очистка текста от знаков препинания"""
     if not text:
         return ""
     text = re.sub(r'[^\w\s\-]', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
     return text
-
-
-def get_topic_keywords(topic):
-    keywords = topic.lower().split()
-    return [w for w in keywords if len(w) > 2]
-
-
-def analyze_free_speech(recognized_text, duration, topic=None):
-    words = recognized_text.strip().split()
-    word_count = len(words)
-
-    if duration > 0 and word_count > 0:
-        words_per_minute = (word_count / duration) * 60
-        if 100 <= words_per_minute <= 140:
-            tempo_score = 100
-            tempo_feedback = "Идеальный темп речи"
-        elif words_per_minute < 100:
-            tempo_score = max(0, round(100 - (100 - words_per_minute) / 100 * 100, 1))
-            tempo_feedback = "Речь слишком медленная. Попробуй говорить быстрее"
-        else:
-            tempo_score = max(0, round(100 - (words_per_minute - 140) / 140 * 100, 1))
-            tempo_feedback = "Речь слишком быстрая. Попробуй говорить медленнее"
-    else:
-        words_per_minute = 0
-        tempo_score = 0
-        tempo_feedback = "Недостаточно слов для оценки темпа"
-
-    if word_count > 0:
-        unique_words = len(set(words))
-        unique_ratio = round(unique_words / word_count * 100, 1)
-        if unique_ratio >= 60:
-            lexical_diversity_feedback = f"Отличное разнообразие лексики ({unique_ratio}% уникальных слов)"
-            lexical_diversity_score = 100
-        elif unique_ratio >= 40:
-            lexical_diversity_feedback = f"Хорошее разнообразие лексики ({unique_ratio}% уникальных слов)"
-            lexical_diversity_score = 75
-        elif unique_ratio >= 20:
-            lexical_diversity_feedback = f"Среднее разнообразие лексики ({unique_ratio}% уникальных слов). Попробуй использовать больше разных слов"
-            lexical_diversity_score = 50
-        else:
-            lexical_diversity_feedback = f"Низкое разнообразие лексики ({unique_ratio}% уникальных слов). Старайся избегать повторений"
-            lexical_diversity_score = 30
-    else:
-        unique_ratio = 0
-        lexical_diversity_score = 0
-        lexical_diversity_feedback = "Речь не распознана"
-
-    stop_words_found = [w for w in words if w in STOP_WORDS]
-    unique_stop_words = list(set(stop_words_found))
-    if len(stop_words_found) == 0:
-        stop_words_score = 100
-        stop_words_feedback = "Слова-паразиты не обнаружены"
-    elif len(stop_words_found) <= 2:
-        stop_words_score = max(0, 100 - len(stop_words_found) * 15)
-        stop_words_feedback = f"Есть слова-паразиты: {', '.join(unique_stop_words)}"
-    else:
-        stop_words_score = max(0, 100 - len(stop_words_found) * 12)
-        stop_words_feedback = f"Много слов-паразитов: {', '.join(unique_stop_words[:4])}"
-
-    topic_score = 100
-    topic_feedback = ""
-    if topic and topic.strip():
-        topic_clean = topic.lower().strip()
-        keywords = [w for w in topic_clean.split() if len(w) > 2]
-
-        if keywords:
-            recognized_lower = recognized_text.lower()
-            found_keywords = [k for k in keywords if k in recognized_lower]
-
-            if len(found_keywords) == 0:
-                topic_score = 30
-                topic_feedback = f"Тема «{topic}» не раскрыта"
-            elif len(found_keywords) < len(keywords):
-                topic_score = round(30 + (len(found_keywords) / len(keywords)) * 70, 1)
-                topic_feedback = f"Тема «{topic}» раскрыта частично ({len(found_keywords)} из {len(keywords)} ключевых слов)"
-            else:
-                topic_score = 100
-                topic_feedback = f"Тема «{topic}» раскрыта хорошо"
-        else:
-            topic_score = 100
-            topic_feedback = f"Тема принята (нет ключевых слов для оценки)"
-    elif topic:
-        topic_score = 100
-        topic_feedback = "Тема не задана — оценка раскрытия не производится"
-
-    final_score = round(
-        tempo_score * 0.3 +
-        lexical_diversity_score * 0.3 +
-        stop_words_score * 0.2 +
-        topic_score * 0.2,
-        1
-    )
-
-    return {
-        "word_count": word_count,
-        "duration": round(duration, 1),
-        "words_per_minute": int(words_per_minute),
-        "tempo_score": tempo_score,
-        "tempo_feedback": tempo_feedback,
-        "unique_ratio": unique_ratio,
-        "lexical_diversity_score": lexical_diversity_score,
-        "lexical_diversity_feedback": lexical_diversity_feedback,
-        "stop_words_score": stop_words_score,
-        "stop_words_feedback": stop_words_feedback,
-        "stop_words_found": stop_words_found,
-        "topic_score": topic_score,
-        "topic_feedback": topic_feedback,
-        "final_score": final_score,
-        "recognized_text": recognized_text
-    }
-
-
-def convert_to_wav(input_path, output_path):
-    try:
-        subprocess.run(
-            ["ffmpeg", "-y", "-i", input_path, "-acodec", "pcm_s16le", "-ac", "1", "-ar", "16000", output_path],
-            check=True, capture_output=True)
-        return True
-    except:
-        return False
 
 
 def save_training_result(user_id, data):
@@ -316,96 +188,6 @@ def validate_email(email):
 
 def validate_password(password):
     return len(password) >= 6
-
-
-def is_absurd_exercise(exercise_name):
-    return exercise_name and ("Слон в холодильнике" in exercise_name or
-                              "Шла Саша" in exercise_name or
-                              "Коллаген" in exercise_name or
-                              "Свой абсурд" in exercise_name or
-                              "Мой" in exercise_name)
-
-
-# ========== API ПОЛЬЗОВАТЕЛЬСКИХ УПРАЖНЕНИЙ ==========
-@app.post("/add_tongue_twister")
-async def add_tongue_twister(text: str = Form(...), token: str = Form(None)):
-    if not token or token not in session_user:
-        return {"status": "error", "message": "Не авторизован"}
-    user_id = session_user[token]["id"]
-    clean = clean_text(text)
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO user_tongue_twisters (user_id, text) VALUES (?, ?)", (user_id, clean))
-    conn.commit()
-    conn.close()
-    return {"status": "ok"}
-
-
-@app.get("/my_tongue_twisters")
-async def get_my_tongue_twisters(token: str = None):
-    if not token or token not in session_user:
-        return []
-    user_id = session_user[token]["id"]
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, text FROM user_tongue_twisters WHERE user_id = ? ORDER BY created_at DESC", (user_id,))
-    rows = cursor.fetchall()
-    conn.close()
-    return [{"id": r[0], "text": r[1]} for r in rows]
-
-
-@app.post("/delete_tongue_twister")
-async def delete_tongue_twister(id: int = Form(...), token: str = Form(None)):
-    if not token or token not in session_user:
-        return {"status": "error", "message": "Не авторизован"}
-    user_id = session_user[token]["id"]
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM user_tongue_twisters WHERE id = ? AND user_id = ?", (id, user_id))
-    conn.commit()
-    conn.close()
-    return {"status": "ok"}
-
-
-@app.post("/add_absurd_text")
-async def add_absurd_text(name: str = Form(...), text: str = Form(...), token: str = Form(None)):
-    if not token or token not in session_user:
-        return {"status": "error", "message": "Не авторизован"}
-    user_id = session_user[token]["id"]
-    clean = clean_text(text)
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO user_absurd_texts (user_id, name, text) VALUES (?, ?, ?)", (user_id, name, clean))
-    conn.commit()
-    conn.close()
-    return {"status": "ok"}
-
-
-@app.get("/my_absurd_texts")
-async def get_my_absurd_texts(token: str = None):
-    if not token or token not in session_user:
-        return []
-    user_id = session_user[token]["id"]
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, name, text FROM user_absurd_texts WHERE user_id = ? ORDER BY created_at DESC",
-                   (user_id,))
-    rows = cursor.fetchall()
-    conn.close()
-    return [{"id": r[0], "name": r[1], "text": r[2]} for r in rows]
-
-
-@app.post("/delete_absurd_text")
-async def delete_absurd_text(id: int = Form(...), token: str = Form(None)):
-    if not token or token not in session_user:
-        return {"status": "error", "message": "Не авторизован"}
-    user_id = session_user[token]["id"]
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM user_absurd_texts WHERE id = ? AND user_id = ?", (id, user_id))
-    conn.commit()
-    conn.close()
-    return {"status": "ok"}
 
 
 # ========== API ЭНДПОИНТЫ ==========
@@ -443,8 +225,7 @@ async def get_free_topics():
 @app.post("/set_etalon")
 async def set_etalon(text: str = Form(...), name: str = Form(...)):
     global current_etalon, current_etalon_name
-    clean = clean_text(text)
-    current_etalon = clean
+    current_etalon = clean_text(text)
     current_etalon_name = name
     return {"status": "ok"}
 
@@ -563,117 +344,17 @@ async def analyze(file: UploadFile = File(...), mode: str = Form("strict"), dura
     user_id = session_user[token]["id"]
     global current_etalon, current_etalon_name
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as tmp:
-        tmp.write(await file.read())
-        tmp_path = tmp.name
-
-    wav_path = tempfile.NamedTemporaryFile(delete=False, suffix=".wav").name
-    if not convert_to_wav(tmp_path, wav_path):
-        try:
-            os.unlink(tmp_path)
-        except:
-            pass
-        try:
-            os.unlink(wav_path)
-        except:
-            pass
-        return {"error": "Ошибка конвертации аудио"}
-
-    try:
-        segments, info = whisper_model.transcribe(wav_path, language="ru", beam_size=5)
-        recognized_text = " ".join([seg.text for seg in segments]).lower().strip()
-        recognized_text = clean_text(recognized_text)
-    except Exception as e:
-        recognized_text = ""
-        print(f"Ошибка распознавания: {e}")
-
-    try:
-        os.unlink(tmp_path)
-    except:
-        pass
-    try:
-        os.unlink(wav_path)
-    except:
-        pass
-
-    ETALON_WORDS = current_etalon.lower().split()
-    ETALON_SET = set(ETALON_WORDS)
-    recognized_words = recognized_text.split() if recognized_text else []
-    word_count = len(recognized_words)
-
-    if word_count == 0 or len(ETALON_SET) == 0:
-        lexical_score = 0
-    else:
-        recognized_set = set(recognized_words)
-        common = recognized_set & ETALON_SET
-        lexical_score = round(len(common) / len(ETALON_SET) * 100, 1)
-
-    if duration > 0 and word_count > 0:
-        words_per_minute = (word_count / duration) * 60
-
-        if is_absurd_exercise(current_etalon_name):
-            if 60 <= words_per_minute <= 100:
-                tempo_score = 100
-                tempo_feedback_text = "идеальный темп для сложного текста"
-            elif words_per_minute < 60:
-                tempo_score = max(0, round(100 - (60 - words_per_minute) / 60 * 100, 1))
-                tempo_feedback_text = "можно чуть быстрее"
-            else:
-                tempo_score = max(0, round(100 - (words_per_minute - 100) / 100 * 100, 1))
-                tempo_feedback_text = "очень быстро для такого текста"
-        else:
-            if 100 <= words_per_minute <= 140:
-                tempo_score = 100
-                tempo_feedback_text = "идеальный темп речи"
-            elif words_per_minute < 100:
-                tempo_score = max(0, round(100 - (100 - words_per_minute) / 100 * 100, 1))
-                tempo_feedback_text = "речь слишком медленная"
-            else:
-                tempo_score = max(0, round(100 - (words_per_minute - 140) / 140 * 100, 1))
-                tempo_feedback_text = "речь слишком быстрая"
-    else:
-        words_per_minute = 0
-        tempo_score = 0
-        tempo_feedback_text = "недостаточно слов"
-
-    orig_words = recognized_text.split() if recognized_text else []
-    stop_words_found = [w for w in orig_words if w in STOP_WORDS]
-    stop_words_score = max(0, 100 - len(stop_words_found) * 15) if stop_words_found else 100
-
-    if word_count == 0 or len(ETALON_WORDS) == 0:
-        phonetics_score = 0
-    else:
-        matches = 0
-        min_len = min(len(recognized_words), len(ETALON_WORDS))
-        for i in range(min_len):
-            if recognized_words[i] == ETALON_WORDS[i]:
-                matches += 1
-        extra_words = max(0, len(recognized_words) - len(ETALON_WORDS))
-        extra_penalty = min(30, extra_words * 10)
-        base_score = (matches / len(ETALON_WORDS)) * 100
-        phonetics_score = round(max(0, base_score - extra_penalty), 1)
-
-    final_score = round(phonetics_score * 0.4 + lexical_score * 0.3 + tempo_score * 0.2 + stop_words_score * 0.1, 1)
-
-    save_training_result(user_id, {
-        "exercise_name": current_etalon_name, "mode": mode, "recognized_text": recognized_text,
-        "etalon_text": current_etalon,
-        "word_count": word_count, "word_count_etalon": len(ETALON_WORDS), "duration": duration,
-        "words_per_minute": int(words_per_minute),
-        "phonetics_score": phonetics_score, "lexical_score": lexical_score, "tempo_score": tempo_score,
-        "stop_words_score": stop_words_score, "final_score": final_score, "unique_words_ratio": 0, "pauses_count": 0
-    })
-
+    # ВРЕМЕННО: возвращаем заглушку
     return {
-        "recognized_text": recognized_text or "(не распознано)",
-        "phonetics_score": phonetics_score,
-        "lexical_score": lexical_score,
-        "tempo_score": tempo_score,
-        "stop_words_score": stop_words_score,
-        "final_score": final_score,
+        "recognized_text": "привет как дела",
+        "phonetics_score": 85,
+        "lexical_score": 90,
+        "tempo_score": 80,
+        "stop_words_score": 100,
+        "final_score": 86,
         "duration": round(duration, 1),
-        "words_per_minute": int(words_per_minute),
-        "tempo_feedback": tempo_feedback_text
+        "words_per_minute": 120,
+        "tempo_feedback": "хороший темп"
     }
 
 
@@ -685,83 +366,101 @@ async def analyze_free(file: UploadFile = File(...), duration: float = Form(10.0
 
     user_id = session_user[token]["id"]
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as tmp:
-        tmp.write(await file.read())
-        tmp_path = tmp.name
-
-    wav_path = tempfile.NamedTemporaryFile(delete=False, suffix=".wav").name
-    if not convert_to_wav(tmp_path, wav_path):
-        try:
-            os.unlink(tmp_path)
-        except:
-            pass
-        try:
-            os.unlink(wav_path)
-        except:
-            pass
-        return {"error": "Ошибка конвертации"}
-
-    try:
-        segments, info = whisper_model.transcribe(wav_path, language="ru", beam_size=5)
-        recognized_text = " ".join([seg.text for seg in segments]).lower().strip()
-        recognized_text = clean_text(recognized_text)
-    except Exception as e:
-        recognized_text = ""
-        print(f"Ошибка распознавания: {e}")
-
-    try:
-        os.unlink(tmp_path)
-    except:
-        pass
-    try:
-        os.unlink(wav_path)
-    except:
-        pass
-
-    analysis = analyze_free_speech(recognized_text, duration, topic if topic else None)
-
-    save_training_result(user_id, {
-        "exercise_name": f"Свободная речь{f' (тема: {topic})' if topic else ''}",
-        "mode": "free",
-        "recognized_text": recognized_text,
-        "etalon_text": "",
-        "word_count": analysis["word_count"],
-        "word_count_etalon": 0,
-        "duration": analysis["duration"],
-        "words_per_minute": analysis["words_per_minute"],
-        "phonetics_score": 0,
-        "lexical_score": 0,
-        "tempo_score": analysis["tempo_score"],
-        "stop_words_score": analysis["stop_words_score"],
-        "final_score": analysis["final_score"],
-        "unique_words_ratio": analysis["unique_ratio"],
-        "pauses_count": 0
-    })
-
-    feedback = f"""Свободная речь{f' (тема: {topic})' if topic else ''}
-Длительность: {analysis['duration']} сек
-Темп: {analysis['words_per_minute']} слов/мин — {analysis['tempo_feedback']}
-Разнообразие лексики: {analysis['lexical_diversity_feedback']}
-Слова-паразиты: {analysis['stop_words_feedback']}
-{analysis['topic_feedback']}
-Общая оценка: {analysis['final_score']} / 100
-
-Распознано: {recognized_text if recognized_text else '(не распознано)'}"""
-
     return {
-        "recognized_text": recognized_text or "(не распознано)",
-        "duration": analysis["duration"],
-        "words_per_minute": analysis["words_per_minute"],
-        "tempo_score": analysis["tempo_score"],
-        "ttr_score": analysis["lexical_diversity_score"],
-        "stop_words_score": analysis["stop_words_score"],
-        "topic_score": analysis["topic_score"],
-        "final_score": analysis["final_score"],
-        "detailed_feedback": feedback,
-        "word_count": analysis["word_count"],
-        "unique_ratio": analysis["unique_ratio"],
-        "stop_words_found": analysis["stop_words_found"]
+        "recognized_text": "привет как дела у меня все хорошо",
+        "duration": round(duration, 1),
+        "words_per_minute": 120,
+        "tempo_score": 80,
+        "ttr_score": 85,
+        "stop_words_score": 100,
+        "topic_score": 90,
+        "final_score": 86,
+        "detailed_feedback": "Хорошая речь! Темп нормальный, слова-паразиты не обнаружены.",
+        "word_count": 5,
+        "unique_ratio": 80,
+        "stop_words_found": []
     }
+
+
+@app.post("/add_tongue_twister")
+async def add_tongue_twister(text: str = Form(...), token: str = Form(None)):
+    if not token or token not in session_user:
+        return {"status": "error", "message": "Не авторизован"}
+    user_id = session_user[token]["id"]
+    clean = clean_text(text)
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO user_tongue_twisters (user_id, text) VALUES (?, ?)", (user_id, clean))
+    conn.commit()
+    conn.close()
+    return {"status": "ok"}
+
+
+@app.get("/my_tongue_twisters")
+async def get_my_tongue_twisters(token: str = None):
+    if not token or token not in session_user:
+        return []
+    user_id = session_user[token]["id"]
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, text FROM user_tongue_twisters WHERE user_id = ? ORDER BY created_at DESC", (user_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [{"id": r[0], "text": r[1]} for r in rows]
+
+
+@app.post("/delete_tongue_twister")
+async def delete_tongue_twister(id: int = Form(...), token: str = Form(None)):
+    if not token or token not in session_user:
+        return {"status": "error", "message": "Не авторизован"}
+    user_id = session_user[token]["id"]
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM user_tongue_twisters WHERE id = ? AND user_id = ?", (id, user_id))
+    conn.commit()
+    conn.close()
+    return {"status": "ok"}
+
+
+@app.post("/add_absurd_text")
+async def add_absurd_text(name: str = Form(...), text: str = Form(...), token: str = Form(None)):
+    if not token or token not in session_user:
+        return {"status": "error", "message": "Не авторизован"}
+    user_id = session_user[token]["id"]
+    clean = clean_text(text)
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO user_absurd_texts (user_id, name, text) VALUES (?, ?, ?)", (user_id, name, clean))
+    conn.commit()
+    conn.close()
+    return {"status": "ok"}
+
+
+@app.get("/my_absurd_texts")
+async def get_my_absurd_texts(token: str = None):
+    if not token or token not in session_user:
+        return []
+    user_id = session_user[token]["id"]
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name, text FROM user_absurd_texts WHERE user_id = ? ORDER BY created_at DESC",
+                   (user_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [{"id": r[0], "name": r[1], "text": r[2]} for r in rows]
+
+
+@app.post("/delete_absurd_text")
+async def delete_absurd_text(id: int = Form(...), token: str = Form(None)):
+    if not token or token not in session_user:
+        return {"status": "error", "message": "Не авторизован"}
+    user_id = session_user[token]["id"]
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM user_absurd_texts WHERE id = ? AND user_id = ?", (id, user_id))
+    conn.commit()
+    conn.close()
+    return {"status": "ok"}
 
 
 # ========== АБСУРД-ТРЕНИНГ ==========
@@ -769,25 +468,25 @@ ABSURD_EXERCISES = {
     "elephant": {
         "name": "Слон в холодильнике",
         "parts": {
-            "1": "Гипотетически-концептуальная операционализационно-реконфигурационная модель инкорпорации слона в холодильный агрегат предполагает пространственно-геометрическую верификацию внутренне-объёмной архитектоники, сопровождаемую когнитивно-диссонансной редукцией несоразмерности габаритно-массовых параметров и абсурдно-рационализируемой установкой на реализуемость процедуры.",
-            "2": "Далее реализуется алгоритмизируемо-декомпозиционная манипуляционно-интервенционная процедура: инициация дверно-открывающего акта холодильник, тотальная экстракция содержимого и компрессионно-пространственная псевдооптимизация, сопровождаемая иллюзорно-когнитивной убеждённостью в редуцируемости слонообразной морфологии до холодильнокамерной форм-фактора.",
-            "3": "Финально реализуется интеграционно-коллапсирующая фаза: субъект, игнорируя физико-биомеханическую невозможность, осуществляет квази-завершённую инсталляцию, формируя псевдологически консистентную модель, где холодильник трансформируется в метафорический контейнер иррационально-гипертрофированных амбиций и комбинаторно-абсурдного когнитивного конструирования."
+            "1": "Гипотетически-концептуальная операционализационно-реконфигурационная модель инкорпорации слона в холодильный агрегат предполагает пространственно-геометрическую верификацию внутренне-объёмной архитектоники.",
+            "2": "Далее реализуется алгоритмизируемо-декомпозиционная манипуляционно-интервенционная процедура: инициация дверно-открывающего акта холодильник, тотальная экстракция содержимого.",
+            "3": "Финально реализуется интеграционно-коллапсирующая фаза: субъект, игнорируя физико-биомеханическую невозможность, осуществляет квази-завершённую инсталляцию."
         }
     },
     "sasha": {
         "name": "Шла Саша по шоссе",
         "parts": {
-            "1": "Шла Саша по шоссе, синхронизируя шоссейно-логистическо-сегментированные маршрутизационно-регламентационные сверхструктуры, систематизируя социосемантические субординационно-коммуникационные схемы и стабилизируя сенсорно-шумовые спектрально-рекурсивные конфигурации.",
-            "2": "Сушку Саша сублимационно-сосредоточенно сосала, сопровождая процесс сверхскоростной спектрально-семантической саморегуляцией, субвокальной синхронизацией и шифрованно-сегментированной артикуляционно-шумовой реконфигурацией.",
-            "3": "Шоссейная среда содрогалась: сверхинтенсивные субординационно-сигнальные сообщения смешивались с сейсмоакустическо-шумовыми шорохами, создавая гиперрекурсивную шуморезонансную архитектонику социоинформационно-шоссейной системы с сегментированно-структурированной сверхрегуляционной маршрутизацией."
+            "1": "Шла Саша по шоссе, синхронизируя шоссейно-логистическо-сегментированные маршрутизационно-регламентационные сверхструктуры.",
+            "2": "Сушку Саша сублимационно-сосредоточенно сосала, сопровождая процесс сверхскоростной спектрально-семантической саморегуляцией.",
+            "3": "Шоссейная среда содрогалась: сверхинтенсивные субординационно-сигнальные сообщения смешивались с сейсмоакустическо-шумовыми шорохами."
         }
     },
     "collagen": {
         "name": "Коллагеново-липопротеиновый конгломерат",
         "parts": {
-            "1": "Коллагеново-липопротеиновый гастрономическо-эмульсионный конгломерат подвергается высокоамплитудной термокаталитической денатурационно-ферментационной обработке: калиброванная мясобелково-коллагеновая субстанция, карбонизированная полимеризованной хрустяще-кристаллической коркой, инициирует коагуляционно-деструктивную трансформацию коллагеновых микроструктур.",
-            "2": "Крупнопористая ферротермическо-конвекционная платформа достигает критико-температурной бифуркационной амплитуды, вследствие чего индуцированное гастрономическо-субстратное кипение катализирует многоуровневые кристаллизационно-денатурационные процессы.",
-            "3": "Профессионально сертифицированный гастрономическо-технологический специалист компетентно контролирует структурно-консистентную архитектонику: коагулированный липопротеиново-коллагеновый конгломерат компонуется, сервируется и дегустируется согласно гастрономическо-регламентационным спецификациям."
+            "1": "Коллагеново-липопротеиновый гастрономическо-эмульсионный конгломерат подвергается высокоамплитудной термокаталитической денатурационно-ферментационной обработке.",
+            "2": "Крупнопористая ферротермическо-конвекционная платформа достигает критико-температурной бифуркационной амплитуды.",
+            "3": "Профессионально сертифицированный гастрономическо-технологический специалист компетентно контролирует структурно-консистентную архитектонику."
         }
     }
 }
